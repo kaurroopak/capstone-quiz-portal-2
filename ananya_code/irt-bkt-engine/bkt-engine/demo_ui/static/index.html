@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synapse | Intelligent Quiz Engine</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-mesh"></div>
+    
+    <div class="app-container">
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen active">
+            <h1>Synapse</h1>
+            <p>Adaptive learning powered by Hybrid IRT & BKT</p>
+            <div class="card info-card">
+                <h3>How it works</h3>
+                <ul>
+                    <li><strong>Diagnostic Phase:</strong> First 5 questions map your initial ability (θ).</li>
+                    <li><strong>Practice Phase:</strong> Remaining questions track your concept mastery dynamically.</li>
+                </ul>
+            </div>
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <button id="start-btn" class="primary-btn">Start Assessment</button>
+                <button id="simulate-struggling-btn" class="secondary-btn" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border-color: #f87171;">Simulate Struggling Student</button>
+            </div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="screen">
+            <header>
+                <div class="progress-bar">
+                    <div id="progress" class="progress-fill"></div>
+                </div>
+                <div class="status-bar">
+                    <span id="phase-badge" class="badge">Diagnostic</span>
+                    <span id="question-counter">Question 1/30</span>
+                </div>
+            </header>
+            
+            <main>
+                <div class="question-card glass-panel">
+                    <h2 id="question-text">Loading question...</h2>
+                    <div id="options-container" class="options-grid">
+                        <!-- Options injected here -->
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="screen">
+            <header>
+                <h2>Assessment Complete</h2>
+                <div class="theta-badge">Ability (θ): <span id="theta-score">0.00</span></div>
+            </header>
+            
+            <div class="results-grid">
+                <div class="glass-panel summary-panel">
+                    <h3>Mastery Summary</h3>
+                    <div id="mastery-bars" class="bars-container">
+                        <!-- Mastery bars injected here -->
+                    </div>
+                </div>
+                
+                <div class="glass-panel suggestions-panel">
+                    <h3>AI Suggestions</h3>
+                    <ul id="suggestions-list">
+                        <!-- Suggestions injected here -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- AI Tutor Interventions -->
+            <div class="glass-panel tutor-panel" style="margin-top: 20px; display: none;" id="tutor-panel">
+                <h3>AI Tutor Interventions</h3>
+                <p style="font-size: 0.9em; color: var(--text-muted); margin-bottom: 10px;">The AI Tutor stepped in to help clarify these concepts when you struggled.</p>
+                <div id="tutor-interventions-list" class="interventions-container">
+                    <!-- Tutor interactions injected here -->
+                </div>
+            </div>
+
+            <!-- Graph Visualizer -->
+            <div class="glass-panel graph-panel" style="margin-top: 20px; display: none;" id="graph-panel">
+                <h3>Knowledge Graph Trace</h3>
+                <p style="font-size: 0.9em; color: var(--text-muted); margin-bottom: 10px;">The graph below traces concepts you struggled with back to their failing prerequisites.</p>
+                <div id="kg-network" style="width: 100%; height: 350px; background: rgba(0,0,0,0.2); border-radius: 8px;"></div>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <button id="restart-btn" class="secondary-btn">Retake Assessment</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
