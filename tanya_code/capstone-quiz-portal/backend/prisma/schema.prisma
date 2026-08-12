@@ -1,0 +1,168 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum CorrectAnswer {
+  A
+  B
+  C
+  D
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+model User {
+  id              String           @id @default(uuid())
+  username        String           @unique
+  email           String           @unique
+  password        String
+  role            Role
+  learningStyle   String           @default("Visual Learner")
+  readingSpeed    String           @default("Average")
+  workingMemory   String           @default("Average")
+  processingSpeed String           @default("Average")
+  theta           Float            @default(0.0)
+  iqScore         Float            @default(100.0)
+  attempts        QuizAttempt[]
+  aiMessages      AiChatMessage[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Chapter {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  topics    Topic[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Topic {
+  id            String               @id @default(uuid())
+  name          String
+  chapterId     String
+  chapter       Chapter              @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  quizzes       Quiz[]
+  content       TopicContent?
+  prerequisites TopicPrerequisite[]  @relation("TopicPrerequisites")
+  requiredBy    TopicPrerequisite[]  @relation("TopicRequiredBy")
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@unique([name, chapterId])
+}
+
+model TopicPrerequisite {
+  id             String   @id @default(uuid())
+  topicId        String
+  topic          Topic    @relation("TopicPrerequisites", fields: [topicId], references: [id], onDelete: Cascade)
+  prerequisiteId String
+  prerequisite   Topic    @relation("TopicRequiredBy", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@unique([topicId, prerequisiteId])
+}
+
+model TopicContent {
+  id        String   @id @default(uuid())
+  topicId   String   @unique
+  topic     Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  learnText String
+  notes     String
+  examples  String
+  formula   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Quiz {
+  id          String        @id @default(uuid())
+  title       String
+  description String?
+  topicId     String
+  topic       Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  duration    Int           // Duration in seconds
+  isActive    Boolean       @default(true)
+  shuffle     Boolean       @default(false)
+  difficulty  Difficulty
+  questions   Question[]
+  attempts    QuizAttempt[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Question {
+  id            String             @id @default(uuid())
+  quizId        String
+  quiz          Quiz               @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  text          String
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  correctAnswer CorrectAnswer
+  imageUrl      String?
+  difficulty    Difficulty
+  responses     QuestionResponse[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model QuizAttempt {
+  id          String             @id @default(uuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId      String
+  quiz        Quiz               @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  startedAt   DateTime           @default(now())
+  submittedAt DateTime?
+  timeSpent   Int?               // Time spent in seconds
+  score       Float?
+  status      AttemptStatus      @default(IN_PROGRESS)
+  responses   QuestionResponse[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model QuestionResponse {
+  id             String        @id @default(uuid())
+  quizAttemptId  String
+  quizAttempt    QuizAttempt   @relation(fields: [quizAttemptId], references: [id], onDelete: Cascade)
+  questionId     String
+  question       Question      @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedAnswer CorrectAnswer?
+  timeSpent      Int           @default(0)
+  answerChanges  Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([quizAttemptId, questionId])
+}
+
+model AiChatMessage {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  sender    String   // 'USER' | 'AI'
+  createdAt DateTime @default(now())
+}

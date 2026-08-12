@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment variables — NEVER push these
+.env
+backend/.env
+frontend/.env
+*.env.local
+
+# Build output
+dist/
+build/
+backend/dist/
+
+# Prisma generated client (re-generated on install)
+backend/node_modules/.prisma/
+
+# Uploads (user-uploaded files)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Excel template (auto-generated on server start)
+sample_template.xlsx
+backend/sample_template.xlsx
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Prisma migrations lock (keep migrations, ignore shadow db)
+backend/prisma/.env
