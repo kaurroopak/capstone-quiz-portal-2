@@ -1,5 +1,5 @@
-import { PrismaClient, Role, Difficulty, CorrectAnswer } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -20,7 +20,7 @@ async function main() {
       username: 'teacher',
       email: 'teacher@quiz.com',
       password: passwordHash,
-      role: Role.TEACHER,
+      role: 'TEACHER',
       learningStyle: 'Auditory Learner',
       readingSpeed: 'Above Average',
       workingMemory: 'High',
@@ -42,7 +42,7 @@ async function main() {
       username: 'student10',
       email: 'student@quiz.com',
       password: passwordHash,
-      role: Role.STUDENT,
+      role: 'STUDENT',
       learningStyle: 'Visual Learner',
       readingSpeed: 'Average',
       workingMemory: 'Average',
@@ -214,7 +214,7 @@ async function main() {
       duration: 900, // 15 minutes
       isActive: true,
       shuffle: true,
-      difficulty: Difficulty.MEDIUM
+      difficulty: 'MEDIUM'
     }
   });
 
@@ -225,8 +225,8 @@ async function main() {
       optionB: 'Current is doubled',
       optionC: 'Current remains unchanged',
       optionD: 'Current increases four times',
-      correctAnswer: CorrectAnswer.B,
-      difficulty: Difficulty.EASY
+      correctAnswer: 'B',
+      difficulty: 'EASY'
     },
     {
       text: 'A wire of resistance R is stretched such that its length is doubled while keeping volume constant. What will be its new resistance?',
@@ -234,8 +234,8 @@ async function main() {
       optionB: 'R / 2',
       optionC: '4 R',
       optionD: 'R / 4',
-      correctAnswer: CorrectAnswer.C,
-      difficulty: Difficulty.HARD
+      correctAnswer: 'C',
+      difficulty: 'HARD'
     },
     {
       text: 'Which of the following SI units represents Electrical Resistivity (ρ)?',
@@ -243,8 +243,8 @@ async function main() {
       optionB: 'Ohm per meter (Ω/m)',
       optionC: 'Ohm-meter (Ω·m)',
       optionD: 'Volt per Ampere (V/A)',
-      correctAnswer: CorrectAnswer.C,
-      difficulty: Difficulty.EASY
+      correctAnswer: 'C',
+      difficulty: 'EASY'
     },
     {
       text: 'If three resistors of 6 Ω each are connected in parallel, what is the equivalent resistance of the combination?',
@@ -252,8 +252,8 @@ async function main() {
       optionB: '2 Ω',
       optionC: '3 Ω',
       optionD: '1 Ω',
-      correctAnswer: CorrectAnswer.B,
-      difficulty: Difficulty.MEDIUM
+      correctAnswer: 'B',
+      difficulty: 'MEDIUM'
     }
   ];
 
@@ -283,7 +283,7 @@ async function main() {
       duration: 900,
       isActive: true,
       shuffle: true,
-      difficulty: Difficulty.MEDIUM
+      difficulty: 'MEDIUM'
     }
   });
 
@@ -294,8 +294,8 @@ async function main() {
       optionB: 'At the center of curvature (C)',
       optionC: 'Between F and C',
       optionD: 'At infinity',
-      correctAnswer: CorrectAnswer.D,
-      difficulty: Difficulty.EASY
+      correctAnswer: 'D',
+      difficulty: 'EASY'
     },
     {
       text: 'The magnification produced by a rear-view mirror fitted in vehicles is always:',
@@ -303,8 +303,8 @@ async function main() {
       optionB: 'More than 1',
       optionC: 'Equal to 1',
       optionD: 'Can be more or less than 1 depending on distance',
-      correctAnswer: CorrectAnswer.A,
-      difficulty: Difficulty.MEDIUM
+      correctAnswer: 'A',
+      difficulty: 'MEDIUM'
     },
     {
       text: 'A concave mirror produces a real, inverted image of the same size as the object. Where must the object be placed?',
@@ -312,8 +312,8 @@ async function main() {
       optionB: 'At F',
       optionC: 'At C',
       optionD: 'Beyond C',
-      correctAnswer: CorrectAnswer.C,
-      difficulty: Difficulty.MEDIUM
+      correctAnswer: 'C',
+      difficulty: 'MEDIUM'
     }
   ];
 

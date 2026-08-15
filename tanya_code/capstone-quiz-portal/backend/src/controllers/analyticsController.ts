@@ -1,7 +1,6 @@
 import { Response } from 'express';
 import prisma from '../config/db';
 import { AuthRequest } from '../middleware/auth';
-import { AttemptStatus } from '@prisma/client';
 
 // Student Dashboard: Progress stats and charts
 export const getStudentDashboard = async (req: AuthRequest, res: Response) => {
@@ -13,7 +12,7 @@ export const getStudentDashboard = async (req: AuthRequest, res: Response) => {
     const attempts = await prisma.quizAttempt.findMany({
       where: {
         userId,
-        status: AttemptStatus.COMPLETED
+        status: 'COMPLETED'
       },
       include: {
         quiz: {
@@ -181,14 +180,14 @@ export const getTeacherDashboard = async (req: AuthRequest, res: Response) => {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     const quizzesTakenThisWeek = await prisma.quizAttempt.count({
       where: {
-        status: AttemptStatus.COMPLETED,
+        status: 'COMPLETED',
         submittedAt: { gte: oneWeekAgo }
       }
     });
 
     // 3. Fetch all completed quiz attempts for grading calculations
     const completedAttempts = await prisma.quizAttempt.findMany({
-      where: { status: AttemptStatus.COMPLETED },
+      where: { status: 'COMPLETED' },
       include: {
         quiz: {
           include: {
@@ -255,7 +254,7 @@ export const getTeacherDashboard = async (req: AuthRequest, res: Response) => {
       include: {
         topic: true,
         attempts: {
-          where: { status: AttemptStatus.COMPLETED }
+          where: { status: 'COMPLETED' }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -303,7 +302,7 @@ export const getStudentDetailReport = async (req: AuthRequest, res: Response) =>
     const attempts = await prisma.quizAttempt.findMany({
       where: {
         userId: studentId,
-        status: AttemptStatus.COMPLETED
+        status: 'COMPLETED'
       },
       include: {
         quiz: {
@@ -386,7 +385,7 @@ export const getQuizDetailReport = async (req: AuthRequest, res: Response) => {
     const attempts = await prisma.quizAttempt.findMany({
       where: {
         quizId,
-        status: AttemptStatus.COMPLETED
+        status: 'COMPLETED'
       },
       include: {
         user: true,

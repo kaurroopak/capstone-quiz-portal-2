@@ -8,23 +8,9 @@ let redisClient: RedisClientType | null = null;
 let isRedisConnected = false;
 
 export const connectRedis = async () => {
-  try {
-    redisClient = createClient({ url: redisUrl }) as RedisClientType;
-    redisClient.on('error', (err) => {
-      console.warn('[Redis] Connection error (Redis is optional):', err.message);
-      isRedisConnected = false;
-    });
-    redisClient.on('connect', () => {
-      console.log('[Redis] Connected successfully.');
-      isRedisConnected = true;
-    });
-    await redisClient.connect();
-    isRedisConnected = true;
-  } catch (err: any) {
-    console.warn('[Redis] Could not connect — quiz auto-save will use in-memory fallback:', err.message);
-    redisClient = null;
-    isRedisConnected = false;
-  }
+  console.log('[Redis] Skipped Redis connection (optional). Using in-memory fallback.');
+  redisClient = null;
+  isRedisConnected = false;
 };
 
 // In-memory fallback store when Redis is unavailable

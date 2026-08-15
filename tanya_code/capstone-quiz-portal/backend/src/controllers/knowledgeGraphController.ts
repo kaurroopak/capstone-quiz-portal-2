@@ -1,11 +1,10 @@
 import { Response } from 'express';
 import prisma from '../config/db';
 import { AuthRequest } from '../middleware/auth';
-import { AttemptStatus } from '@prisma/client';
 
 async function getStudentTopicMastery(userId: string): Promise<Map<string, number>> {
   const attempts = await prisma.quizAttempt.findMany({
-    where: { userId, status: AttemptStatus.COMPLETED },
+    where: { userId, status: 'COMPLETED' },
     include: { quiz: { include: { questions: true } } }
   });
   const topicScores: Map<string, number[]> = new Map();
@@ -25,7 +24,7 @@ async function getStudentTopicMastery(userId: string): Promise<Map<string, numbe
 
 async function getClassTopicMastery(): Promise<Map<string, number>> {
   const attempts = await prisma.quizAttempt.findMany({
-    where: { status: AttemptStatus.COMPLETED },
+    where: { status: 'COMPLETED' },
     include: { quiz: { include: { questions: true } } }
   });
   const topicScores: Map<string, number[]> = new Map();

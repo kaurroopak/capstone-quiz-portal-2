@@ -1,6 +1,5 @@
 import prisma from '../config/db';
 import { getQuizProgress, deleteQuizProgress } from '../config/redis';
-import { CorrectAnswer, AttemptStatus } from '@prisma/client';
 import { AdaptiveService } from './adaptiveService';
 
 export const submitQuizAttempt = async (attemptId: string, clientAnswers?: any): Promise<any> => {
@@ -20,7 +19,7 @@ export const submitQuizAttempt = async (attemptId: string, clientAnswers?: any):
     throw new Error('Quiz attempt not found');
   }
 
-  if (attempt.status === AttemptStatus.COMPLETED) {
+  if (attempt.status === 'COMPLETED') {
     return attempt;
   }
 
@@ -38,7 +37,7 @@ export const submitQuizAttempt = async (attemptId: string, clientAnswers?: any):
 
   const responsePromises = questions.map(async (question) => {
     const answerData = mergedAnswers[question.id] || {};
-    const selectedAnswer = (answerData.selectedAnswer || null) as CorrectAnswer | null;
+    const selectedAnswer = (answerData.selectedAnswer || null) as string | null;
     const timeSpent = typeof answerData.timeSpent === 'number' ? answerData.timeSpent : 0;
     const answerChanges = typeof answerData.answerChanges === 'number' ? answerData.answerChanges : 0;
 
@@ -88,7 +87,7 @@ export const submitQuizAttempt = async (attemptId: string, clientAnswers?: any):
   const updatedAttempt = await prisma.quizAttempt.update({
     where: { id: attemptId },
     data: {
-      status: AttemptStatus.COMPLETED,
+      status: 'COMPLETED',
       submittedAt,
       timeSpent,
       score

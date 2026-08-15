@@ -1,4 +1,4 @@
-import { PrismaClient, Difficulty, CorrectAnswer } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 

@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import prisma from '../config/db';
 import { parseExcelFile } from '../services/excelService';
-import { Difficulty, CorrectAnswer } from '@prisma/client';
 
 export const getChapters = async (req: Request, res: Response) => {
   try {
@@ -183,7 +182,7 @@ export const importExcel = async (req: Request, res: Response) => {
             duration: 600, // default 10 minutes (600 seconds)
             isActive: true,
             shuffle: true,
-            difficulty: Difficulty.MEDIUM
+            difficulty: 'MEDIUM'
           }
         });
       }
@@ -197,8 +196,8 @@ export const importExcel = async (req: Request, res: Response) => {
           optionB: row.optionB,
           optionC: row.optionC,
           optionD: row.optionD,
-          correctAnswer: row.correctAnswer as CorrectAnswer,
-          difficulty: row.difficulty as Difficulty,
+          correctAnswer: row.correctAnswer as string,
+          difficulty: row.difficulty as string,
           imageUrl: row.imageRef || null // Store initial ref if exists, teacher can upload later
         }
       });

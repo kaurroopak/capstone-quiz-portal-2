@@ -1,7 +1,6 @@
 import cron from 'node-cron';
 import prisma from '../config/db';
 import { submitQuizAttempt } from './quizService';
-import { AttemptStatus } from '@prisma/client';
 
 export const initCronJobs = () => {
   // Run every minute
@@ -14,7 +13,7 @@ export const initCronJobs = () => {
       // Find all in-progress attempts
       const activeAttempts = await prisma.quizAttempt.findMany({
         where: {
-          status: AttemptStatus.IN_PROGRESS
+          status: 'IN_PROGRESS'
         },
         include: {
           quiz: true

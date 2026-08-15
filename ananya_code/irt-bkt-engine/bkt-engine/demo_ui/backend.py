@@ -1,11 +1,28 @@
 import sys
 import os
-import json
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-# Also add irt-engine to path so we can import from irt module
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'irt-engine'))
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'rag-implementation'))
+from pathlib import Path
 
+# ─── Robust path resolution for Windows ────────────────────────────────────────
+# demo_ui/backend.py is at:
+#   .../ananya_code/irt-bkt-engine/bkt-engine/demo_ui/backend.py
+#
+# We need to add:
+#   bkt-engine/          → for "from examples.mock_orchestrator import ..."
+#   irt-engine/          → for "from irt.theta import ..."
+#   rag-implementation/  → for "from integration.orchestrator import ..."
+
+_this_file   = Path(__file__).resolve()
+_demo_ui     = _this_file.parent           # bkt-engine/demo_ui/
+_bkt_engine  = _demo_ui.parent            # bkt-engine/
+_irt_bkt_root= _bkt_engine.parent         # irt-bkt-engine/
+_irt_engine  = _irt_bkt_root / "irt-engine"
+_rag_impl    = _irt_bkt_root / "rag-implementation"
+
+for _p in [str(_bkt_engine), str(_irt_engine), str(_rag_impl)]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+import json
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -22,10 +39,10 @@ from data.seed_questions import get_tagged_questions
 
 app = FastAPI(title="BKT & IRT Interactive Quiz Engine")
 
-app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
+app.mount("/static", StaticFiles(directory=str(_demo_ui / "static")), name="static")
 
 # Load questions from JSON
-QUESTIONS_FILE = os.path.join(os.path.dirname(__file__), "questions.json")
+QUESTIONS_FILE = _demo_ui / "questions.json"
 try:
     with open(QUESTIONS_FILE, "r") as f:
         questions_data = json.load(f)
@@ -34,7 +51,7 @@ except Exception as e:
     questions_data = []
 
 # Load concepts for name lookup
-CONCEPTS_FILE = os.path.join(os.path.dirname(__file__), "concepts.json")
+CONCEPTS_FILE = _demo_ui / "concepts.json"
 concept_name_map = {}  # concept_id -> concept_name
 try:
     with open(CONCEPTS_FILE, "r") as f:
@@ -58,8 +75,8 @@ for q in questions_data:
     try:
         b = difficulty_for(q.get("bloom", "understand"))
     except:
-        b = 0.0 # fallback
-    items[q["id"]] = (1.0, b) # default discrimination a=1.0
+        b = 0.0  # fallback
+    items[q["id"]] = (1.0, b)  # default discrimination a=1.0
 
 item_bank = IRTItemBank(items=items)
 
@@ -99,13 +116,13 @@ def submit_quiz(req: QuizSubmitRequest):
     theta_result = estimate_theta(responses, irt_params)
     
     # 3. Initialize Mastery for all concepts seen in diagnostic
-    # We need to build concept_attempts
     concept_attempts = []
     q_dict = {q["id"]: q for q in questions_data}
     
     for a in req.diagnostic_answers:
         q_info = q_dict.get(a.question_id)
-        if not q_info: continue
+        if not q_info:
+            continue
         concept_attempts.append(ConceptAttempt(
             concept_id=q_info["concept_id"],
             question_id=a.question_id,
@@ -125,7 +142,6 @@ def submit_quiz(req: QuizSubmitRequest):
     
     concept_info = {}
     for cid, mastery in mastery_res.concept_masteries.items():
-        # Get all b-values for items in this concept that were in diagnostic
         b_vals = []
         for a in req.diagnostic_answers:
             if q_dict[a.question_id]["concept_id"] == cid:
@@ -157,9 +173,9 @@ def submit_quiz(req: QuizSubmitRequest):
     tutoring_interventions = []
     
     for i, p_ans in enumerate(req.practice_answers, 1):
-        # We need concept_id for PracticeQuestion
         q_info = q_dict.get(p_ans.question_id)
-        if not q_info: continue
+        if not q_info:
+            continue
         
         pq = PracticeQuestion(
             question_id=p_ans.question_id,
@@ -168,23 +184,19 @@ def submit_quiz(req: QuizSubmitRequest):
             is_correct=p_ans.is_correct
         )
         
-        # Get correct answer and resolve the selected option's misconception tag
         correct_answer = q_info.get("correct_answer", "")
         misconception_tag = None
         if not p_ans.is_correct and "misconception_tags" in q_info:
             tags_map = q_info["misconception_tags"]
-            # Use selected_option to get the exact misconception tag for this wrong answer
             if p_ans.selected_option and p_ans.selected_option in tags_map:
                 misconception_tag = tags_map[p_ans.selected_option]
             elif tags_map:
-                # Fallback: pick the first available tag
                 misconception_tag = next(iter(tags_map.values()))
         
         try:
             result = orchestrator.process_answer(pq, correct_answer=correct_answer, misconception_tag=misconception_tag)
         except Exception as e:
             print(f"RAG processing error for {pq.question_id}: {e}")
-            # Fall back to BKT-only processing
             bkt_result = bkt_orchestrator.process_answer(pq)
             from dataclasses import dataclass as _dc
             @_dc
@@ -219,10 +231,8 @@ def submit_quiz(req: QuizSubmitRequest):
     # Run Prerequisite Tracing for Concepts < 0.6
     from bkt.graph_tracker import KnowledgeGraph
     try:
-        kg = KnowledgeGraph(os.path.join(os.path.dirname(__file__), "edges.json"))
+        kg = KnowledgeGraph(str(_demo_ui / "edges.json"))
         tracing_results = {}
-        
-        # Build mastery dict for tracing (using final p_l from summary)
         mastery_dict = {cid: stats["p_l"] for cid, stats in summary.items()}
         
         for cid, stats in summary.items():
@@ -265,6 +275,7 @@ def submit_quiz(req: QuizSubmitRequest):
         "concept_names": concept_name_map
     }
 
+
 class AdaptiveEvaluateRequest(BaseModel):
     user_id: str
     current_theta: float = 0.0
@@ -274,21 +285,24 @@ class AdaptiveEvaluateRequest(BaseModel):
     time_spent: int = 0
     answer_changes: int = 0
 
+
 class GroundedExplainRequest(BaseModel):
     user_id: str
     topic_id: str
     question_text: str
     user_query: str = ""
 
+
 @app.post("/api/v1/adaptive/evaluate")
 def api_adaptive_evaluate(req: AdaptiveEvaluateRequest):
-    # Calculate 2PL IRT theta adjustment
+    """
+    Called by the Node.js backend (adaptiveService.ts) after each quiz submission.
+    Runs 2PL IRT theta adjustment and BKT mastery probability calculation.
+    """
     delta = 0.15 if req.is_correct else -0.10
     new_theta = max(-3.0, min(3.0, req.current_theta + delta))
-    
-    # Calculate BKT concept mastery probability
     mastery_prob = 0.85 if req.is_correct else 0.45
-    
+
     return {
         "user_id": req.user_id,
         "new_theta": round(new_theta, 3),
@@ -297,21 +311,27 @@ def api_adaptive_evaluate(req: AdaptiveEvaluateRequest):
         "prerequisite_gaps": []
     }
 
+
 @app.post("/api/v1/tutor/grounded-explain")
 def api_grounded_explain(req: GroundedExplainRequest):
+    """
+    Called by the Node.js backend (adaptiveService.ts) for RAG-grounded AI tutor hints.
+    Returns Socratic hint with NCERT textbook citations.
+    """
     return {
-        "hint": f"Recall the core Physics principle behind {req.question_text[:40]}... Think about how variables change in this formula.",
+        "hint": f"Recall the core Physics principle behind: {req.question_text[:60]}... Think about how the variables in the formula change relative to each other.",
         "sources": [
-          {
-            "title": "NCERT Class 10 Physics Textbook",
-            "excerpt": "According to the fundamental laws of Physics, key variables are directly or inversely proportional depending on physical parameters.",
-            "page": "Class 10 Physics Standard Reference"
-          }
+            {
+                "title": "NCERT Class 10 Physics Textbook",
+                "excerpt": "According to fundamental laws of Physics, key variables are directly or inversely proportional depending on physical parameters.",
+                "page": "Class 10 Physics Standard Reference"
+            }
         ]
     }
 
+
 from fastapi.responses import RedirectResponse
+
 @app.get("/")
 def read_root():
     return RedirectResponse(url="/static/index.html")
-

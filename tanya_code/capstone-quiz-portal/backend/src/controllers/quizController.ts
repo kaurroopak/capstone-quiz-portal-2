@@ -3,7 +3,6 @@ import prisma from '../config/db';
 import { saveQuizProgress, getQuizProgress } from '../config/redis';
 import { submitQuizAttempt } from '../services/quizService';
 import { AuthRequest } from '../middleware/auth';
-import { Difficulty, CorrectAnswer, AttemptStatus } from '@prisma/client';
 import path from 'path';
 
 // Teacher: Create a Quiz
@@ -23,7 +22,7 @@ export const createQuiz = async (req: AuthRequest, res: Response) => {
         duration: parseInt(duration), // in seconds
         isActive: isActive !== undefined ? Boolean(isActive) : true,
         shuffle: shuffle !== undefined ? Boolean(shuffle) : false,
-        difficulty: difficulty as Difficulty
+        difficulty: difficulty as string
       }
     });
 
@@ -113,8 +112,8 @@ export const addQuestion = async (req: AuthRequest, res: Response) => {
         optionB: optionB.trim(),
         optionC: optionC.trim(),
         optionD: optionD.trim(),
-        correctAnswer: correctAnswer as CorrectAnswer,
-        difficulty: difficulty as Difficulty
+        correctAnswer: correctAnswer as string,
+        difficulty: difficulty as string
       }
     });
 
@@ -203,7 +202,7 @@ export const startQuizAttempt = async (req: AuthRequest, res: Response) => {
       where: {
         userId,
         quizId,
-        status: AttemptStatus.IN_PROGRESS
+        status: 'IN_PROGRESS'
       },
       include: {
         quiz: {
@@ -236,7 +235,7 @@ export const startQuizAttempt = async (req: AuthRequest, res: Response) => {
       data: {
         userId,
         quizId,
-        status: AttemptStatus.IN_PROGRESS
+        status: 'IN_PROGRESS'
       },
       include: {
         quiz: {
@@ -283,7 +282,7 @@ export const autoSaveAttempt = async (req: AuthRequest, res: Response) => {
       where: { id: attemptId }
     });
 
-    if (!attempt || attempt.userId !== req.user?.id || attempt.status !== AttemptStatus.IN_PROGRESS) {
+    if (!attempt || attempt.userId !== req.user?.id || attempt.status !== 'IN_PROGRESS') {
       return res.status(400).json({ error: 'Invalid or closed quiz attempt.' });
     }
 
@@ -312,7 +311,7 @@ export const submitQuiz = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Quiz attempt not found.' });
     }
 
-    if (attempt.status === AttemptStatus.COMPLETED) {
+    if (attempt.status === 'COMPLETED') {
       return res.status(400).json({ error: 'This quiz has already been submitted.' });
     }
 

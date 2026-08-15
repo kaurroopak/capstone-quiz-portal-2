@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
-import { Role } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'quiz_portal_jwt_secret_key_class_10_2026!';
 const JWT_EXPIRY = '8h';
@@ -46,7 +45,7 @@ export const signup = async (req: Request, res: Response) => {
         username: username.trim().toLowerCase(),
         email: email.trim().toLowerCase(),
         password: hashedPassword,
-        role: role as Role
+        role: role as string
       }
     });
 
