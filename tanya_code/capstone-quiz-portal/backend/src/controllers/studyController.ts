@@ -60,3 +60,49 @@ export const saveStudyContent = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ error: 'Failed to save topic study material.' });
   }
 };
+
+export const markTopicAsLearned = async (req: AuthRequest, res: Response) => {
+  try {
+    const { topicId } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { learnedTopics: true, xp: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let learnedTopics: string[] = [];
+    try {
+      learnedTopics = JSON.parse(user.learnedTopics);
+    } catch (e) {
+      // ignore parse error if empty string
+    }
+
+    if (learnedTopics.includes(topicId)) {
+      return res.json({ alreadyLearned: true, xpAwarded: 0 });
+    }
+
+    learnedTopics.push(topicId);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        learnedTopics: JSON.stringify(learnedTopics),
+        xp: { increment: 10 }
+      }
+    });
+
+    return res.json({ alreadyLearned: false, xpAwarded: 10 });
+  } catch (error) {
+    console.error('Error marking topic as learned:', error);
+    return res.status(500).json({ error: 'Failed to mark topic as learned.' });
+  }
+};

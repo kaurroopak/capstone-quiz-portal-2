@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import prisma from '../config/db';
+import { AdaptiveService } from '../services/adaptiveService';
 import { saveQuizProgress, getQuizProgress } from '../config/redis';
 import { submitQuizAttempt } from '../services/quizService';
 import { AuthRequest } from '../middleware/auth';
@@ -388,3 +389,61 @@ export const getAttemptResults = async (req: AuthRequest, res: Response) => {
   }
 };
 
+
+export const getAttemptEvaluations = async (req: any, res: any) => {
+  try {
+    const { attemptId } = req.params;
+    const userId = req.user?.id;
+    const isTeacher = req.user?.role === 'TEACHER';
+
+    const attempt = await prisma.quizAttempt.findUnique({
+      where: { id: attemptId },
+      include: {
+        user: true,
+        quiz: true,
+        responses: {
+          include: { question: true }
+        }
+      }
+    });
+
+    if (!attempt) {
+      return res.status(404).json({ error: 'Quiz attempt not found.' });
+    }
+
+    if (!isTeacher && attempt.userId !== userId) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+
+    const topicPrereqs = await prisma.topicPrerequisite.findMany({
+      where: { topicId: attempt.quiz.topicId },
+      include: { prerequisite: true }
+    });
+    const prereqNames = topicPrereqs.map(p => p.prerequisite.name);
+
+    const evaluations: Record<string, string> = {};
+    const questionsCount = attempt.responses.length || 1;
+    const scorePercent = Math.round(((attempt.score || 0) / questionsCount) * 100);
+    const masteryProb = scorePercent / 100;
+
+    for (const response of attempt.responses) {
+      const evalText = await AdaptiveService.getDetailedEvaluation({
+        userId: attempt.userId,
+        questionText: response.question.text,
+        selectedAnswer: response.selectedAnswer || 'None',
+        correctAnswer: response.question.correctAnswer,
+        isCorrect: response.selectedAnswer === response.question.correctAnswer,
+        currentTheta: attempt.user.theta,
+        masteryProbability: masteryProb,
+        topicId: attempt.quiz.topicId,
+        prerequisiteGaps: prereqNames
+      });
+      evaluations[response.questionId] = evalText;
+    }
+
+    return res.json({ evaluations });
+  } catch (error) {
+    console.error('Failed to get attempt evaluations:', error);
+    return res.status(500).json({ error: 'Failed to retrieve evaluations.' });
+  }
+};

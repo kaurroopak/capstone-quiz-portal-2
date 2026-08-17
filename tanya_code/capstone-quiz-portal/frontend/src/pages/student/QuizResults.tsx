@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import client from '../../api/client';
 
+import ReactMarkdown from 'react-markdown';
+
 interface ResponseItem {
   id: string;
   selectedAnswer: 'A' | 'B' | 'C' | 'D' | null;
@@ -27,6 +29,12 @@ interface AttemptResult {
     questions: { id: string }[];
   };
   responses: ResponseItem[];
+  studentStanding?: {
+    theta: number;
+    xp: number;
+    masteryProbability: number;
+    prerequisiteGaps: { id: string; name: string; chapterName: string }[];
+  };
 }
 
 export const QuizResults: React.FC = () => {
@@ -34,6 +42,8 @@ export const QuizResults: React.FC = () => {
   const [result, setResult] = useState<AttemptResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [evaluations, setEvaluations] = useState<Record<string, string> | null>(null);
+  const [evalLoading, setEvalLoading] = useState(false);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -49,6 +59,16 @@ export const QuizResults: React.FC = () => {
     };
     fetchResults();
   }, [attemptId]);
+
+  useEffect(() => {
+    if (result && !evaluations && !evalLoading) {
+      setEvalLoading(true);
+      client.get(`/attempts/${attemptId}/evaluations`)
+        .then(res => setEvaluations(res.data.evaluations))
+        .catch(err => console.error("Failed to load evaluations", err))
+        .finally(() => setEvalLoading(false));
+    }
+  }, [result, attemptId, evaluations, evalLoading]);
 
   if (loading) {
     return <div style={{ fontWeight: 600, padding: '40px', color: 'var(--color-text-light)' }}>Grading your answers...</div>;
@@ -129,6 +149,58 @@ export const QuizResults: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {result.studentStanding && (
+        <div className="card" style={{ padding: '24px', marginBottom: '32px', backgroundColor: 'var(--color-surface)', borderLeft: '6px solid var(--color-primary)' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-dark)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>🧠</span> Concept Mastery & Growth
+          </h2>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div>
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '13px' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--color-text-light)' }}>BKT Mastery Probability</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>{Math.round(result.studentStanding.masteryProbability * 100)}%</span>
+                </div>
+                <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--color-bg)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.round(result.studentStanding.masteryProbability * 100)}%`, height: '100%', backgroundColor: result.studentStanding.masteryProbability >= 0.8 ? 'var(--color-success)' : result.studentStanding.masteryProbability >= 0.5 ? 'var(--color-warning)' : 'var(--color-danger)' }} />
+                </div>
+              </div>
+              
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '13px' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--color-text-light)' }}>IRT Ability (θ)</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-dark)' }}>{result.studentStanding.theta > 0 ? '+' : ''}{result.studentStanding.theta.toFixed(2)}</span>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--color-text-light)' }}>
+                  {result.studentStanding.theta >= 1.0 ? 'Advanced Level' : result.studentStanding.theta >= 0.0 ? 'Intermediate Level' : 'Beginner Level'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ paddingLeft: '24px', borderLeft: '1px solid var(--color-border)' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-dark)', marginBottom: '12px' }}>Knowledge Graph Tracing</h3>
+              {result.studentStanding.prerequisiteGaps && result.studentStanding.prerequisiteGaps.length > 0 ? (
+                <div>
+                  <p style={{ fontSize: '13px', color: 'var(--color-text-light)', marginBottom: '12px' }}>Based on your performance, you may want to review these foundational concepts first:</p>
+                  <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '13.5px', fontWeight: 500 }}>
+                    {result.studentStanding.prerequisiteGaps.map(gap => (
+                      <li key={gap.id} style={{ color: 'var(--color-primary-dark)', marginBottom: '6px' }}>
+                        {gap.name} <span style={{ color: 'var(--color-text-light)', fontSize: '12px', fontWeight: 400 }}>({gap.chapterName})</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-success-dark)', fontSize: '13px', fontWeight: 500, backgroundColor: 'var(--color-success-bg)', padding: '12px', borderRadius: 'var(--radius-sm)' }}>
+                  <span>✓</span> You have a solid foundation for this topic. No prerequisite gaps detected!
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-dark)', marginBottom: '20px' }}>
         Question-by-Question Analysis
@@ -225,6 +297,25 @@ export const QuizResults: React.FC = () => {
               <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--color-text-light)', fontWeight: 600, borderTop: '1px solid var(--color-border)', paddingTop: '10px' }}>
                 <span>Time Spent: {resp.timeSpent}s</span>
                 <span>Answer Modifications: {resp.answerChanges} times</span>
+              </div>
+
+              {/* Detailed Evaluation Section */}
+              <div style={{ marginTop: '16px', background: 'var(--color-primary-light)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-primary)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '20px' }}>🤖</span>
+                <div style={{ width: '100%' }}>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '13px', color: 'var(--color-primary-dark)', fontWeight: 800 }}>Personalized AI Evaluation</h4>
+                  <div style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-dark)', lineHeight: 1.5, display: 'block' }}>
+                    {evaluations ? (
+                      evaluations[resp.question.id] ? (
+                        <ReactMarkdown>{evaluations[resp.question.id]}</ReactMarkdown>
+                      ) : (
+                        "No detailed evaluation available."
+                      )
+                    ) : (
+                      "Generating personalized evaluation..."
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           );

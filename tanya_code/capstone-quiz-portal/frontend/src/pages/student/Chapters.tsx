@@ -1,66 +1,80 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
-interface QuizInfo {
-  id: string;
-  title: string;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-  duration: number;
-  _count: { questions: number };
+function masteryColor(pct: number): string {
+  if (pct >= 80) return 'var(--mastery-100)';
+  if (pct >= 60) return 'var(--mastery-80)';
+  if (pct >= 40) return 'var(--mastery-60)';
+  if (pct >= 20) return 'var(--mastery-40)';
+  if (pct > 0)   return 'var(--mastery-20)';
+  return 'var(--mastery-0)';
 }
 
-interface TopicInfo {
-  id: string;
-  name: string;
-  quizzes: QuizInfo[];
+const CHAPTER_COLORS: Record<string, string> = {
+  'Light': 'var(--ch-optics)',
+  'Electricity': 'var(--ch-electric)',
+  'Human Eye': 'var(--ch-eye)',
+  'Magnetic': 'var(--ch-magnet)',
+};
+function chapterColor(chName: string): string {
+  for (const [key, val] of Object.entries(CHAPTER_COLORS)) {
+    if (chName.toLowerCase().includes(key.toLowerCase())) return val;
+  }
+  return 'var(--ink)';
 }
 
-interface ChapterInfo {
-  id: string;
-  name: string;
-  topics: TopicInfo[];
-}
+interface QuizInfo { id: string; title: string; difficulty: string; duration: number; _count: { questions: number }; }
+interface TopicInfo { id: string; name: string; quizzes: QuizInfo[]; }
+interface ChapterInfo { id: string; name: string; topics: TopicInfo[]; }
 
 export const StudentChapters: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [chapters, setChapters] = useState<ChapterInfo[]>([]);
   const [expandedChapters, setExpandedChapters] = useState<{ [id: string]: boolean }>({});
+  const [learnedTopics, setLearnedTopics] = useState<string[]>([]);
+  const [topicMastery, setTopicMastery] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  // Modal state
+
+  // Confirm modal for quiz start
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedQuiz, setSelectedQuiz] = useState<QuizInfo | null>(null);
   const [startingQuiz, setStartingQuiz] = useState(false);
 
-  const navigate = useNavigate();
-
   useEffect(() => {
-    const fetchChapters = async () => {
+    const fetchAll = async () => {
       try {
-        const res = await client.get('/chapters');
-        setChapters(res.data);
-        
-        // Expand the first chapter by default if exists
-        if (res.data.length > 0) {
-          setExpandedChapters({ [res.data[0].id]: true });
-        }
+        const [chapRes, dashRes] = await Promise.all([
+          client.get('/chapters'),
+          client.get('/analytics/student')
+        ]);
+        const chs: ChapterInfo[] = chapRes.data;
+        setChapters(chs);
+        if (chs.length > 0) setExpandedChapters({ [chs[0].id]: true });
+
+        // Learned topics & mastery from dashboard
+        const dash = dashRes.data;
+        setLearnedTopics(dash.learnedTopics || []);
+        const mMap: Record<string, number> = {};
+        [...(dash.strongTopics || []), ...(dash.weakTopics || []), ...(dash.improvingTopics || [])].forEach((t: any) => {
+          mMap[t.topicId] = t.averageScore;
+        });
+        setTopicMastery(mMap);
       } catch (err) {
         console.error(err);
-        setError('Failed to fetch syllabus chapters.');
+        setError('Failed to load modules.');
       } finally {
         setLoading(false);
       }
     };
-    fetchChapters();
+    fetchAll();
   }, []);
 
-  const toggleChapter = (chapterId: string) => {
-    setExpandedChapters(prev => ({
-      ...prev,
-      [chapterId]: !prev[chapterId]
-    }));
-  };
+  const toggleChapter = (id: string) =>
+    setExpandedChapters(prev => ({ ...prev, [id]: !prev[id] }));
 
   const handleStartRequest = (quiz: QuizInfo) => {
     setSelectedQuiz(quiz);
@@ -72,102 +86,152 @@ export const StudentChapters: React.FC = () => {
     setStartingQuiz(true);
     try {
       const res = await client.post('/attempts/start', { quizId: selectedQuiz.id });
-      navigate(`/student/quiz/${selectedQuiz.id}`, { state: { attempt: res.data.attempt, cachedProgress: res.data.cachedProgress } });
+      navigate(`/student/quiz/${selectedQuiz.id}`, {
+        state: { attempt: res.data.attempt, cachedProgress: res.data.cachedProgress }
+      });
     } catch (err) {
       console.error(err);
-      alert('Failed to start quiz attempt. Please try again.');
+      alert('Failed to start quiz. Please try again.');
     } finally {
       setStartingQuiz(false);
       setShowConfirmModal(false);
     }
   };
 
-  if (loading) {
-    return <div style={{ fontWeight: 600, padding: '40px', color: 'var(--color-text-light)' }}>Loading syllabus and topics...</div>;
-  }
-
-  if (error) {
-    return <div className="alert alert-danger" style={{ margin: '40px' }}>{error}</div>;
-  }
+  if (loading) return <div className="loading animate-fade-in">Loading modules...</div>;
+  if (error) return <div className="alert alert-danger" style={{ margin: '40px' }}>{error}</div>;
 
   return (
-    <div>
-      <div style={{ marginBottom: '32px' }}>
-        <h1 className="header-title">Syllabus Quizzes</h1>
-        <p className="header-subtitle">Select a Class 10 chapter to browse topics and practice active quizzes.</p>
+    <div style={{ padding: '32px 36px', maxWidth: '1100px' }}>
+      <div style={{ marginBottom: '28px' }}>
+        <h1 className="display-heading">My Modules</h1>
+        <p style={{ color: 'var(--ink-muted)', fontSize: '14px', marginTop: '6px' }}>
+          Open a module to learn the concept, then practice with a quiz, then ask the AI tutor if you're stuck.
+        </p>
       </div>
 
       {chapters.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-light)', fontSize: '13.5px' }}>
-          No chapters or quizzes are currently published by teachers. Please check back later!
+        <div className="card" style={{ textAlign: 'center', padding: '48px', color: 'var(--ink-muted)' }}>
+          No chapters published yet.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {chapters.map((chapter) => {
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {chapters.map(chapter => {
             const isExpanded = expandedChapters[chapter.id];
+            const chColor = chapterColor(chapter.name);
             return (
               <div key={chapter.id} className="accordion">
                 <div className="accordion-header" onClick={() => toggleChapter(chapter.id)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontWeight: 700, color: 'var(--color-text-dark)', fontSize: '15px' }}>{chapter.name}</span>
+                    <div style={{
+                      width: '8px', height: '8px', borderRadius: '50%',
+                      background: chColor, flexShrink: 0
+                    }} />
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '16px', color: 'var(--ink)' }}>
+                      {chapter.name}
+                    </span>
+                    <span style={{ fontSize: '12px', color: 'var(--ink-muted)', fontWeight: 600 }}>
+                      {chapter.topics.length} topics
+                    </span>
                   </div>
-                  <span style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', fontWeight: 700, fontSize: '12px' }}>
-                    ▶
-                  </span>
+                  <span style={{
+                    transform: isExpanded ? 'rotate(90deg)' : 'none',
+                    transition: 'transform 0.2s',
+                    color: 'var(--ink-muted)', fontSize: '13px'
+                  }}>▶</span>
                 </div>
 
                 {isExpanded && (
                   <div className="accordion-body">
                     {chapter.topics.length === 0 ? (
-                      <p style={{ fontStyle: 'italic', color: 'var(--color-text-light)', padding: '8px', fontSize: '13px' }}>
-                        No topics under this chapter yet.
+                      <p style={{ color: 'var(--ink-muted)', fontStyle: 'italic', fontSize: '13px' }}>
+                        No topics added yet.
                       </p>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        {chapter.topics.map((topic) => (
-                          <div key={topic.id} style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
-                            <div style={{ marginBottom: '12px' }}>
-                              <h3 style={{ fontSize: '14.5px', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
-                                {topic.name}
-                              </h3>
-                            </div>
-                            {topic.quizzes.length === 0 ? (
-                              <p style={{ fontStyle: 'italic', fontSize: '13px', color: 'var(--color-text-light)', marginLeft: '12px' }}>
-                                No quizzes available for this topic.
-                              </p>
-                            ) : (
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginLeft: '12px' }}>
-                                {topic.quizzes.map((quiz) => (
-                                  <div key={quiz.id} className="card card-hover" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px', boxShadow: 'var(--shadow-sm)' }}>
-                                    <div>
-                                      <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '6px', color: 'var(--color-text-dark)' }}>
-                                        {quiz.title}
-                                      </h4>
-                                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                                        <span className={`badge badge-${quiz.difficulty.toLowerCase()}`}>
-                                          {quiz.difficulty}
-                                        </span>
-                                        <span style={{ fontSize: '12px', color: 'var(--color-text-light)', fontWeight: 500 }}>
-                                          Duration: {Math.round(quiz.duration / 60)}m
-                                        </span>
-                                        <span style={{ fontSize: '12px', color: 'var(--color-text-light)', fontWeight: 500 }}>
-                                          Questions: {quiz._count.questions}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <button
-                                      className="btn btn-primary"
-                                      style={{ padding: '8px 16px', fontSize: '12px', alignSelf: 'flex-start', width: '100%' }}
-                                      onClick={() => handleStartRequest(quiz)}
-                                    >
-                                      Take Quiz
-                                    </button>
-                                  </div>
-                                ))}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
+                        {chapter.topics.map(topic => {
+                          const mastery = topicMastery[topic.id] ?? 0;
+                          const learned = learnedTopics.includes(topic.id);
+                          const hasQuiz = topic.quizzes.length > 0;
+                          const mColor = masteryColor(mastery);
+
+                          return (
+                            <div key={topic.id} style={{
+                              background: '#FFFFFF',
+                              border: '1px solid var(--border)',
+                              borderRadius: '12px',
+                              padding: '18px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '12px',
+                              transition: 'all 0.2s',
+                              borderTop: `3px solid ${chColor}`
+                            }}
+                              className="card-hover"
+                            >
+                              {/* Topic name */}
+                              <div>
+                                <h3 style={{ fontSize: '14.5px', fontWeight: 700, color: 'var(--ink)', marginBottom: '4px' }}>
+                                  {topic.name}
+                                </h3>
+                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                  <span style={{
+                                    fontSize: '10.5px', fontWeight: 700, padding: '2px 8px', borderRadius: '20px',
+                                    background: learned ? 'var(--success-bg)' : 'var(--paper-3)',
+                                    color: learned ? '#047857' : 'var(--ink-muted)',
+                                    border: `1px solid ${learned ? 'rgba(5,150,105,0.2)' : 'var(--border)'}`
+                                  }}>
+                                    {learned ? '✓ Learned' : '📖 Learn first'}
+                                  </span>
+                                  {hasQuiz && (
+                                    <span style={{
+                                      fontSize: '10.5px', fontWeight: 700, padding: '2px 8px', borderRadius: '20px',
+                                      background: 'var(--accent-light)', color: 'var(--accent-dark)',
+                                      border: '1px solid var(--accent-border)'
+                                    }}>
+                                      {topic.quizzes[0].difficulty}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        ))}
+
+                              {/* Mastery bar */}
+                              <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    BKT Mastery
+                                  </span>
+                                  <span style={{ fontSize: '12px', fontWeight: 700, color: mColor }}>
+                                    {mastery > 0 ? `${mastery}%` : 'Not attempted'}
+                                  </span>
+                                </div>
+                                <div className="mastery-bar-track">
+                                  <div className="mastery-bar-fill" style={{ width: `${mastery}%`, background: mColor }} />
+                                </div>
+                              </div>
+
+                              {/* CTA buttons */}
+                              <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+                                <button
+                                  className="btn btn-primary"
+                                  style={{ flex: 1, fontSize: '12.5px', padding: '8px 12px' }}
+                                  onClick={() => navigate(`/student/study/${topic.id}`)}
+                                >
+                                  {learned ? '→ Open Module' : '📖 Start Learning'}
+                                </button>
+                                {hasQuiz && learned && (
+                                  <button
+                                    className="btn btn-outline"
+                                    style={{ fontSize: '12px', padding: '8px 12px', flexShrink: 0 }}
+                                    onClick={() => handleStartRequest(topic.quizzes[0])}
+                                  >
+                                    Practice
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -178,36 +242,24 @@ export const StudentChapters: React.FC = () => {
         </div>
       )}
 
-      {/* Confirmation Modal */}
+      {/* Confirm Quiz Modal */}
       {showConfirmModal && selectedQuiz && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '12px', color: 'var(--color-text-dark)' }}>
-              Confirm Quiz Start
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', marginBottom: '10px', color: 'var(--ink)' }}>
+              Start Practice Quiz
             </h2>
-            <p style={{ fontSize: '13.5px', color: 'var(--color-text-light)', marginBottom: '24px', lineHeight: 1.6 }}>
-              You are about to start <strong>{selectedQuiz.title}</strong>. This quiz contains{' '}
-              <strong>{selectedQuiz._count.questions} questions</strong> and has a time limit of{' '}
-              <strong>{Math.round(selectedQuiz.duration / 60)} minutes</strong>.
-              <br /><br />
-              Your progress will be auto-saved every 5 seconds. If you close your tab or lose connection, your quiz will automatically submit when the timer expires.
+            <p style={{ fontSize: '14px', color: 'var(--ink-muted)', lineHeight: 1.6, marginBottom: '20px' }}>
+              <strong style={{ color: 'var(--ink)' }}>{selectedQuiz.title}</strong> —{' '}
+              {selectedQuiz._count?.questions} questions, {Math.round(selectedQuiz.duration / 60)} minutes.
+              Your progress saves automatically.
             </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                className="btn"
-                style={{ textTransform: 'none', padding: '10px 20px', boxShadow: 'none' }}
-                onClick={() => setShowConfirmModal(false)}
-                disabled={startingQuiz}
-              >
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-outline" onClick={() => setShowConfirmModal(false)} disabled={startingQuiz}>
                 Cancel
               </button>
-              <button
-                className="btn btn-primary"
-                style={{ textTransform: 'none', padding: '10px 20px' }}
-                onClick={handleConfirmStart}
-                disabled={startingQuiz}
-              >
-                {startingQuiz ? 'Initializing...' : 'Start Quiz'}
+              <button className="btn btn-primary" onClick={handleConfirmStart} disabled={startingQuiz}>
+                {startingQuiz ? 'Starting...' : 'Begin Quiz'}
               </button>
             </div>
           </div>

@@ -29,6 +29,7 @@ export const getStudentDashboard = async (req: AuthRequest, res: Response) => {
       orderBy: { startedAt: 'asc' }
     });
 
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { theta: true, learnedTopics: true, xp: true } });
     const totalAttempts = attempts.length;
 
     // Calculate average score and total time spent
@@ -159,7 +160,16 @@ export const getStudentDashboard = async (req: AuthRequest, res: Response) => {
       weakTopics,
       improvingTopics,
       progressChart,
-      recentActivity
+      recentActivity,
+      theta: user?.theta || 0.0,
+      xp: user?.xp || 0,
+      learnedTopics: (() => {
+        try {
+          return user?.learnedTopics ? JSON.parse(user.learnedTopics) : [];
+        } catch (e) {
+          return [];
+        }
+      })()
     });
   } catch (error) {
     console.error('Student dashboard error:', error);

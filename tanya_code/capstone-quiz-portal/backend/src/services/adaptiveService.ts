@@ -1,8 +1,7 @@
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/db';
 
-const prisma = new PrismaClient();
-const PYTHON_FASTAPI_URL = process.env.PYTHON_FASTAPI_URL || 'http://127.0.0.1:8080';
+const PYTHON_FASTAPI_URL = process.env.ML_ENGINE_URL || 'http://127.0.0.1:8080';
 
 export interface EvaluationPayload {
   userId: string;
@@ -13,6 +12,29 @@ export interface EvaluationPayload {
   answerChanges: number;
 }
 
+export interface QuizEvaluationPayload {
+  userId: string;
+  answers: {
+    questionId: string;
+    topicId: string;
+    isCorrect: boolean;
+    timeSpent: number;
+    answerChanges: number;
+  }[];
+}
+
+export interface DetailedEvaluationPayload {
+  userId: string;
+  questionText: string;
+  selectedAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  currentTheta: number;
+  masteryProbability: number;
+  topicId?: string;
+  prerequisiteGaps?: string[];
+}
+
 export interface EvaluationResult {
   newTheta: number;
   masteryProbability: number;
@@ -20,31 +42,12 @@ export interface EvaluationResult {
   prerequisiteGaps: string[];
 }
 
-export interface GroundedExplanationPayload {
-  userId: string;
-  topicId: string;
-  questionText: string;
-  userQuery?: string;
-}
-
-export interface GroundedExplanationResult {
-  hint: string;
-  sources: { title: string; excerpt: string; page?: string }[];
-}
-
-/**
- * Service to bridge Node.js backend with Python IRT/BKT & RAG Engine
- */
 export class AdaptiveService {
-  /**
-   * Process a question attempt through 2PL IRT and BKT HMM engines
-   */
   static async evaluateAttempt(payload: EvaluationPayload): Promise<EvaluationResult> {
     try {
       const user = await prisma.user.findUnique({ where: { id: payload.userId } });
       const currentTheta = user?.theta ?? 0.0;
 
-      // Call Python FastAPI adaptive evaluation endpoint
       const response = await axios.post(`${PYTHON_FASTAPI_URL}/api/v1/adaptive/evaluate`, {
         user_id: payload.userId,
         current_theta: currentTheta,
@@ -53,16 +56,10 @@ export class AdaptiveService {
         is_correct: payload.isCorrect,
         time_spent: payload.timeSpent,
         answer_changes: payload.answerChanges
-      }, { timeout: 3000 });
+      }, { timeout: 120000 });
 
       const newTheta = response.data.new_theta ?? currentTheta;
       const masteryProb = response.data.mastery_probability ?? (payload.isCorrect ? 0.85 : 0.45);
-
-      // Persist updated theta back to PostgreSQL
-      await prisma.user.update({
-        where: { id: payload.userId },
-        data: { theta: newTheta }
-      });
 
       return {
         newTheta,
@@ -70,60 +67,87 @@ export class AdaptiveService {
         masteryStatus: masteryProb >= 0.85 ? 'MASTERED' : masteryProb >= 0.5 ? 'PROGRESSING' : 'NEEDS_REVISION',
         prerequisiteGaps: response.data.prerequisite_gaps || []
       };
-    } catch (error) {
-      console.warn('Python FastAPI engine offline or non-responsive. Falling back to internal heuristic evaluation.');
-      
-      // Standalone Fallback Math (2PL IRT Step & BKT update heuristic)
-      const user = await prisma.user.findUnique({ where: { id: payload.userId } });
-      const currentTheta = user?.theta ?? 0.0;
-      
-      // Step theta up by 0.15 on correct, down by 0.1 on incorrect
-      const delta = payload.isCorrect ? 0.15 : -0.10;
-      const newTheta = Math.max(-3.0, Math.min(3.0, currentTheta + delta));
-
-      await prisma.user.update({
-        where: { id: payload.userId },
-        data: { theta: newTheta }
-      });
-
-      const masteryProb = payload.isCorrect ? 0.82 : 0.45;
-
+    } catch (err) {
+      console.error('Python ML backend evaluation failed:', err);
       return {
-        newTheta,
-        masteryProbability: masteryProb,
-        masteryStatus: masteryProb >= 0.80 ? 'MASTERED' : 'NEEDS_REVISION',
+        newTheta: payload.isCorrect ? 0.1 : -0.1,
+        masteryProbability: payload.isCorrect ? 0.8 : 0.2,
+        masteryStatus: 'PROGRESSING',
         prerequisiteGaps: []
       };
     }
   }
 
-  /**
-   * Request RAG-grounded Socratic explanation with NCERT textbook citations
-   */
-  static async getGroundedExplanation(payload: GroundedExplanationPayload): Promise<GroundedExplanationResult> {
+  static async evaluateQuiz(payload: QuizEvaluationPayload): Promise<EvaluationResult> {
     try {
-      const response = await axios.post(`${PYTHON_FASTAPI_URL}/api/v1/tutor/grounded-explain`, {
+      const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+      const currentTheta = user?.theta ?? 0.0;
+
+      const response = await axios.post(`${PYTHON_FASTAPI_URL}/api/v1/adaptive/evaluate-quiz`, {
+        user_id: payload.userId,
+        current_theta: currentTheta,
+        answers: payload.answers
+      }, { timeout: 120000 });
+
+      const newTheta = response.data.new_theta ?? currentTheta;
+      const masteryProb = response.data.mastery_probability ?? 0.5;
+
+      return {
+        newTheta,
+        masteryProbability: masteryProb,
+        masteryStatus: masteryProb >= 0.85 ? 'MASTERED' : masteryProb >= 0.5 ? 'PROGRESSING' : 'NEEDS_REVISION',
+        prerequisiteGaps: response.data.prerequisite_gaps || []
+      };
+    } catch (err) {
+      console.error('Python ML backend quiz evaluation failed:', err);
+      return {
+        newTheta: 0.0,
+        masteryProbability: 0.5,
+        masteryStatus: 'PROGRESSING',
+        prerequisiteGaps: []
+      };
+    }
+  }
+
+  static async getDetailedEvaluation(payload: DetailedEvaluationPayload): Promise<string> {
+    try {
+      const response = await axios.post(`${PYTHON_FASTAPI_URL}/api/v1/tutor/evaluate-answer`, {
+        user_id: payload.userId,
+        question_text: payload.questionText,
+        selected_answer: payload.selectedAnswer,
+        correct_answer: payload.correctAnswer,
+        is_correct: payload.isCorrect,
+        current_theta: payload.currentTheta,
+        mastery_probability: payload.masteryProbability,
+        topic_id: payload.topicId || "generic",
+        prerequisite_gaps: payload.prerequisiteGaps || []
+      }, { timeout: 120000 });
+
+      return response.data.evaluation;
+    } catch (err) {
+      console.error('Python ML backend detailed evaluation failed:', err);
+      return `You selected ${payload.selectedAnswer}, but the correct answer is ${payload.correctAnswer}. Keep reviewing!`;
+    }
+  }
+
+  static async getGroundedExplanation(payload: any): Promise<any> {
+    try {
+      const response = await axios.post(`${PYTHON_FASTAPI_URL}/api/v1/tutor/hint`, {
         user_id: payload.userId,
         topic_id: payload.topicId,
         question_text: payload.questionText,
-        user_query: payload.userQuery || ''
-      }, { timeout: 4000 });
+        user_query: payload.userQuery
+      }, { timeout: 120000 });
 
       return {
-        hint: response.data.hint,
+        hint: response.data.hint || 'Here is a hint based on your query.',
         sources: response.data.sources || []
       };
-    } catch (error) {
-      console.warn('Python RAG service offline. Returning grounded static hint.');
+    } catch (err) {
+      console.error('Python ML backend hint generation failed:', err);
       return {
-        hint: "Recall Ohm's Law (V = I × R). When potential difference increases at constant temperature, electric current increases proportionally.",
-        sources: [
-          {
-            title: "NCERT Class 10 Physics - Chapter 12: Electricity",
-            excerpt: "Ohm's Law states that the current flowing through a conductor is directly proportional to the potential difference across its ends, provided temperature remains constant.",
-            page: "Section 12.4, p. 203"
-          }
-        ]
+        hint: 'I am unable to connect to the knowledge base right now. Please try again later.',
+        sources: []
       };
     }
   }
