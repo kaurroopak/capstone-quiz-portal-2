@@ -17,6 +17,7 @@ import { StudyConcept } from './pages/student/StudyConcept';
 import { AiTutor } from './pages/student/AiTutor';
 import { StudyList } from './pages/student/StudyList';
 import { KnowledgeGraph } from './pages/teacher/KnowledgeGraph';
+import { StudentSkillTree } from './pages/student/StudentSkillTree';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -63,18 +64,25 @@ const AppContent: React.FC = () => {
                 <StudyConcept />
               </ProtectedRoute>
             } />
+            <Route path="/student/skill-tree" element={
+              <ProtectedRoute allowedRole="STUDENT">
+                <StudentSkillTree />
+              </ProtectedRoute>
+            } />
+            <Route path="/student/knowledge-graph" element={
+              <ProtectedRoute allowedRole="STUDENT">
+                <StudentSkillTree />
+              </ProtectedRoute>
+            } />
             <Route path="/student/ai-tutor" element={
               <ProtectedRoute allowedRole="STUDENT">
                 <AiTutor />
               </ProtectedRoute>
             } />
-            <Route path="/student/knowledge-graph" element={
-              <ProtectedRoute allowedRole="STUDENT">
-                <KnowledgeGraph />
-              </ProtectedRoute>
-            } />
 
             {/* Teacher Protected Routes */}
+
+
             <Route path="/teacher/dashboard" element={
               <ProtectedRoute allowedRole="TEACHER">
                 <TeacherDashboard />

@@ -21,6 +21,8 @@ model User {
   workingMemory   String           @default("Average")
   processingSpeed String           @default("Average")
   theta           Float            @default(0.0)
+  learnedTopics   String           @default("[]")
+  xp              Int              @default(0)
   iqScore         Float            @default(100.0)
   attempts        QuizAttempt[]
   aiMessages      AiChatMessage[]

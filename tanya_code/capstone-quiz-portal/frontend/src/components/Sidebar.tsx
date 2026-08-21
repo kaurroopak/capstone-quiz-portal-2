@@ -1,101 +1,112 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   if (!user) return null;
-
   const isTeacher = user.role === 'TEACHER';
+
+  // XP caps at next round milestone for the progress bar
+  const xp = (user as any).xp ?? 0;
+  const xpLevel = Math.floor(xp / 100) + 1;
+  const xpInLevel = xp % 100;
 
   return (
     <div className="sidebar">
-      {/* Brand Header */}
-      <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', background: 'rgba(6, 182, 212, 0.15)', border: '1px solid rgba(6, 182, 212, 0.3)', marginBottom: '12px' }}>
-          <span style={{ fontSize: '18px' }}>⚛️</span>
-          <span style={{ fontSize: '13px', fontWeight: 800, color: '#06b6d4', letterSpacing: '0.5px' }}>SYNAPSE PHYSICS</span>
+      {/* Brand */}
+      <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '7px',
+          padding: '5px 12px',
+          borderRadius: '20px',
+          background: 'var(--accent-light)',
+          border: '1px solid var(--accent-border)',
+          marginBottom: '14px'
+        }}>
+          <span style={{ fontSize: '15px' }}>⚛️</span>
+          <span style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: '12px',
+            fontWeight: 800,
+            color: 'var(--accent-dark)',
+            letterSpacing: '0.08em'
+          }}>SYNAPSE PHYSICS</span>
         </div>
       </div>
 
-      {/* User Info */}
-      <div style={{ marginBottom: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+      {/* User Avatar */}
+      <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
         <div style={{
-          width: '56px',
-          height: '56px',
+          width: '52px',
+          height: '52px',
           borderRadius: '50%',
-          backgroundColor: isTeacher ? 'var(--color-secondary)' : '#06b6d4',
-          color: 'white',
+          background: isTeacher ? '#F59E0B' : 'var(--ink)',
+          color: 'var(--paper)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontWeight: 800,
           fontSize: '18px',
-          border: '2px solid rgba(255, 255, 255, 0.2)',
-          boxShadow: '0 4px 12px rgba(6, 182, 212, 0.3)',
-          marginBottom: '4px'
+          fontFamily: 'var(--font-display)'
         }}>
           {user.username.substring(0, 2).toUpperCase()}
         </div>
         <div style={{ textAlign: 'center' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc' }}>{user.username}</h3>
-          <span className="badge" style={{
-            fontSize: '10px',
-            marginTop: '4px',
-            backgroundColor: isTeacher ? 'rgba(245, 158, 11, 0.2)' : 'rgba(99, 102, 241, 0.2)',
-            color: isTeacher ? '#f59e0b' : '#a5b4fc',
-            border: `1px solid ${isTeacher ? '#f59e0b' : '#6366f1'}`
-          }}>
-            CLASS 10 • {user.role}
-          </span>
+          <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--ink)' }}>{user.username}</div>
+          <div style={{ fontSize: '11px', color: 'var(--ink-muted)', marginTop: '2px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Class 10 · {user.role}
+          </div>
         </div>
+
+        {/* XP Bar — only for students */}
+        {!isTeacher && (
+          <div style={{ width: '100%', padding: '0 4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Lv {xpLevel}
+              </span>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent-dark)' }}>
+                {xp} XP
+              </span>
+            </div>
+            <div className="xp-bar-track">
+              <div className="xp-bar-fill" style={{ width: `${xpInLevel}%` }} />
+            </div>
+          </div>
+        )}
       </div>
 
-      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      {/* Navigation */}
+      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {isTeacher ? (
           <>
-            <NavLink to="/teacher/dashboard" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              📊 Command Center
-            </NavLink>
-            <NavLink to="/teacher/chapters" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              📚 Physics Chapters
-            </NavLink>
-            <NavLink to="/teacher/quizzes" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              📝 Quiz & Excel Upload
-            </NavLink>
-            <NavLink to="/teacher/knowledge-graph" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              🕸️ Physics Knowledge Graph
-            </NavLink>
-            <NavLink to="/profile" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              👤 Account Profile
-            </NavLink>
+            <NavLink to="/teacher/dashboard"   className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>📊 Command Center</NavLink>
+            <NavLink to="/teacher/chapters"    className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>📚 Chapters</NavLink>
+            <NavLink to="/teacher/quizzes"     className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>📝 Quiz Upload</NavLink>
+            <NavLink to="/teacher/knowledge-graph" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>🕸️ Knowledge Graph</NavLink>
+            <NavLink to="/profile"             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>👤 Profile</NavLink>
           </>
         ) : (
           <>
-            <NavLink to="/student/dashboard" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              🏠 Command Center
-            </NavLink>
-            <NavLink to="/student/chapters" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              📝 JEE Mains Physics Exam
-            </NavLink>
-            <NavLink to="/student/knowledge-graph" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              🕸️ Physics Skill Tree
-            </NavLink>
-            <NavLink to="/student/study" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              📚 NCERT Concept Study
-            </NavLink>
-            <NavLink to="/student/ai-tutor" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              🤖 Socratic AI Tutor
-            </NavLink>
-            <NavLink to="/profile" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              👤 Account Profile
-            </NavLink>
+            <NavLink to="/student/dashboard"   className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>🏠 Command Center</NavLink>
+            <NavLink to="/student/chapters"    className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>📗 My Modules</NavLink>
+            <NavLink to="/student/skill-tree"  className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>🌿 Skill Tree</NavLink>
+            <NavLink to="/student/ai-tutor"    className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>🤖 AI Tutor</NavLink>
+            <NavLink to="/profile"             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>👤 Profile</NavLink>
           </>
         )}
       </nav>
 
-      <button className="btn btn-danger" onClick={logout} style={{ width: '100%', padding: '10px', fontSize: '13px', marginTop: '16px' }}>
+      <button
+        className="btn btn-outline"
+        onClick={logout}
+        style={{ width: '100%', padding: '9px', fontSize: '13px', marginTop: '14px' }}
+      >
         Log Out
       </button>
     </div>

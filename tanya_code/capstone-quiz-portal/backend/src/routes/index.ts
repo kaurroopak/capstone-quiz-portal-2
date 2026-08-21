@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { signup, login, updateProfile } from '../controllers/authController';
 import { getChapters, createChapter, createTopic, importExcel } from '../controllers/chapterController';
-import { getStudyContent, saveStudyContent } from '../controllers/studyController';
+import { getStudyContent, saveStudyContent, markTopicAsLearned } from '../controllers/studyController';
 import { getChatHistory, askTutor } from '../controllers/aiController';
 import {
   createQuiz,
@@ -14,7 +14,8 @@ import {
   autoSaveAttempt,
   submitQuiz,
   toggleQuizStatus,
-  getAttemptResults
+  getAttemptResults,
+  getAttemptEvaluations
 } from '../controllers/quizController';
 import {
   getStudentDashboard,
@@ -37,10 +38,12 @@ router.put('/auth/profile', authenticateJWT, updateProfile);
 router.get('/chapters', authenticateJWT, getChapters);
 router.get('/quizzes/:id', authenticateJWT, getQuizById);
 router.get('/attempts/:attemptId/results', authenticateJWT, getAttemptResults);
+router.get('/attempts/:attemptId/evaluations', authenticateJWT, getAttemptEvaluations);
 
 // Study & AI Tutor routes
 router.get('/study/:topicId', authenticateJWT, getStudyContent);
 router.post('/study/:topicId', authenticateJWT, requireTeacher, saveStudyContent);
+router.post('/study/:topicId/learn-viewed', authenticateJWT, requireStudent, markTopicAsLearned);
 
 // AI routes - both /ai-tutor/chat (legacy) and /ai/ask (new JEE portal) paths supported
 router.get('/ai-tutor/chat', authenticateJWT, getChatHistory);

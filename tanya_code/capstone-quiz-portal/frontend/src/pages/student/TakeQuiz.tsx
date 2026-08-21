@@ -67,7 +67,7 @@ export const TakeQuiz: React.FC = () => {
 
         // Start attempt in backend
         const attemptRes = await client.post(`/quizzes/${id}/start`);
-        setAttemptId(attemptRes.data.id);
+        setAttemptId(attemptRes.data.attempt.id);
 
         // Initialize statuses
         const initialMap: Record<string, QuestionStatus> = {};
@@ -134,8 +134,8 @@ export const TakeQuiz: React.FC = () => {
     };
   }, [currentIndex, quiz]);
 
-  if (loading) return <div style={{ padding: '40px', color: '#06b6d4', fontWeight: 700 }}>Launching JEE Mains Physics Exam Portal...</div>;
-  if (error || !quiz) return <div className="alert alert-danger" style={{ margin: '40px' }}>{error || 'Quiz not found'}</div>;
+  if (loading) return <div className="loading animate-fade-in">Launching JEE Mains Physics Exam Portal...</div>;
+  if (error || !quiz) return <div className="alert alert-danger animate-fade-in" style={{ margin: '40px' }}>{error || 'Quiz not found'}</div>;
 
   const currentQ = quiz.questions[currentIndex];
   const currentStat = qStatuses[currentQ.id] || { selectedOption: null, state: 'NOT_VISITED', timeSpent: 0, answerChanges: 0 };
@@ -245,7 +245,7 @@ export const TakeQuiz: React.FC = () => {
     });
 
     try {
-      await client.post(`/quizzes/attempt/${attemptId}/submit`, { answers: answersPayload });
+      await client.post(`/attempts/${attemptId}/submit`, { responses: answersPayload });
       navigate(`/student/results/${attemptId}`);
     } catch (e) {
       console.error(e);
@@ -262,33 +262,33 @@ export const TakeQuiz: React.FC = () => {
   const countAnsweredMarked = Object.values(qStatuses).filter((s) => s.state === 'ANSWERED_AND_MARKED').length;
 
   return (
-    <div style={{ background: '#090d16', minHeight: '100vh', color: '#f8fafc', fontFamily: 'Plus Jakarta Sans, sans-serif', display: 'flex', flexDirection: 'column' }}>
+    <div className="animate-fade-in" style={{ background: 'var(--color-bg)', minHeight: '100vh', color: 'var(--color-text)', fontFamily: 'var(--font-sans)', display: 'flex', flexDirection: 'column' }}>
       {/* Top Header Bar (NTA JEE Style) */}
-      <header style={{ background: '#0f172a', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <header style={{ background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-sm)' }}>
         <div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#06b6d4', letterSpacing: '0.5px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-accent-dark)', letterSpacing: '0.5px' }}>
             NTA JEE MAINS SIMULATOR • CLASS 10 PHYSICS
           </div>
-          <h2 style={{ fontSize: '16px', fontWeight: 700, margin: '2px 0 0 0', color: '#f8fafc' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '2px 0 0 0', color: 'var(--color-text-dark)' }}>
             {quiz.title}
           </h2>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           {/* Circular Countdown Timer */}
-          <div style={{ background: 'rgba(6, 182, 212, 0.1)', border: '1px solid #06b6d4', borderRadius: '12px', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ background: 'var(--color-accent-light)', border: '1px solid var(--color-accent)', borderRadius: '12px', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '16px' }}>⏱️</span>
             <div>
-              <div style={{ fontSize: '9px', color: '#94a3b8', fontWeight: 700 }}>TIME REMAINING</div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: '#06b6d4' }}>{formatTimer(timeLeft)}</div>
+              <div style={{ fontSize: '10px', color: 'var(--color-text-light)', fontWeight: 700 }}>TIME REMAINING</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-accent-dark)' }}>{formatTimer(timeLeft)}</div>
             </div>
           </div>
 
-          <button onClick={() => setShowFormulaDrawer(!showFormulaDrawer)} className="btn" style={{ background: 'rgba(255,255,255,0.08)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.2)', fontSize: '12px' }}>
+          <button onClick={() => setShowFormulaDrawer(!showFormulaDrawer)} className="btn btn-outline" style={{ fontSize: '13px' }}>
             📐 Formulas & Constants
           </button>
 
-          <button onClick={handleTriggerAiHint} className="btn" style={{ background: 'linear-gradient(135deg, #a855f7, #6366f1)', color: '#fff', border: 'none', fontSize: '12px' }}>
+          <button onClick={handleTriggerAiHint} className="btn btn-primary" style={{ fontSize: '13px' }}>
             🤖 Socratic AI Hint
           </button>
         </div>
@@ -297,32 +297,32 @@ export const TakeQuiz: React.FC = () => {
       {/* Main Workspace (Split View) */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Left Panel: Question Workspace */}
-        <div style={{ flex: 1, padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ flex: 1, padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             {/* Question Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-              <span style={{ fontSize: '16px', fontWeight: 800, color: '#06b6d4' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--color-border)' }}>
+              <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-accent-dark)' }}>
                 Question {currentIndex + 1} of {quiz.questions.length}
               </span>
-              <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.2)', color: '#a5b4fc', border: '1px solid #6366f1', fontSize: '11px' }}>
+              <span className="badge" style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary-dark)', border: '1px solid var(--color-primary-light)', fontSize: '11px' }}>
                 Single Choice MCQ (Class 10 Physics)
               </span>
             </div>
 
             {/* Question Text */}
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#f8fafc', lineHeight: 1.6, marginBottom: '24px' }}>
+            <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-text-dark)', lineHeight: 1.6, marginBottom: '28px' }}>
               {currentQ.text}
             </div>
 
             {/* Optional Image / Diagram */}
             {currentQ.imageUrl && (
-              <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-                <img src={currentQ.imageUrl} alt="Physics Diagram" style={{ maxWidth: '100%', maxHeight: '220px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)' }} />
+              <div style={{ marginBottom: '28px', textAlign: 'center' }}>
+                <img src={currentQ.imageUrl} alt="Physics Diagram" style={{ maxWidth: '100%', maxHeight: '240px', borderRadius: '16px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-md)' }} />
               </div>
             )}
 
             {/* MCQ Options A, B, C, D */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '32px' }}>
               {[
                 { key: 'A', text: currentQ.optionA },
                 { key: 'B', text: currentQ.optionB },
@@ -335,33 +335,35 @@ export const TakeQuiz: React.FC = () => {
                     key={opt.key}
                     onClick={() => handleOptionSelect(opt.key)}
                     style={{
-                      padding: '14px 20px',
-                      borderRadius: '12px',
-                      background: isSelected ? 'rgba(6, 182, 212, 0.2)' : 'rgba(15, 23, 42, 0.6)',
-                      border: isSelected ? '2px solid #06b6d4' : '1px solid rgba(255, 255, 255, 0.1)',
-                      color: isSelected ? '#06b6d4' : '#cbd5e1',
+                      padding: '16px 20px',
+                      borderRadius: '16px',
+                      background: isSelected ? 'var(--color-accent-light)' : 'var(--color-surface)',
+                      border: isSelected ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
+                      color: isSelected ? 'var(--color-accent-dark)' : 'var(--color-text)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '14px',
-                      transition: 'all 0.2s ease'
+                      gap: '16px',
+                      transition: 'all 0.2s ease',
+                      boxShadow: isSelected ? 'var(--shadow-sm)' : 'inset 0 1px 2px rgba(0,0,0,0.02)'
                     }}
                   >
                     <div style={{
-                      width: '28px',
-                      height: '28px',
+                      width: '32px',
+                      height: '32px',
                       borderRadius: '50%',
-                      background: isSelected ? '#06b6d4' : 'rgba(255,255,255,0.05)',
-                      color: isSelected ? '#0f172a' : '#94a3b8',
+                      background: isSelected ? 'var(--color-accent)' : 'var(--color-bg)',
+                      color: isSelected ? 'var(--color-text-inverse)' : 'var(--color-text-light)',
+                      border: isSelected ? 'none' : '1px solid var(--color-border)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 800,
-                      fontSize: '13px'
+                      fontSize: '14px'
                     }}>
                       {opt.key}
                     </div>
-                    <div style={{ fontSize: '14.5px', fontWeight: 500 }}>{opt.text}</div>
+                    <div style={{ fontSize: '15.5px', fontWeight: 600 }}>{opt.text}</div>
                   </div>
                 );
               })}
@@ -369,21 +371,21 @@ export const TakeQuiz: React.FC = () => {
           </div>
 
           {/* Action Navigation Footer */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={handleMarkForReview} className="btn" style={{ background: '#6366f1', color: '#fff', border: 'none', fontSize: '13px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={handleMarkForReview} className="btn" style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary-dark)', border: '1px solid var(--color-primary)', fontSize: '14px' }}>
                 🟪 Mark for Review & Next
               </button>
-              <button onClick={handleClearResponse} className="btn" style={{ background: 'rgba(255,255,255,0.08)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)', fontSize: '13px' }}>
+              <button onClick={handleClearResponse} className="btn btn-outline" style={{ fontSize: '14px' }}>
                 Clear Response
               </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={handleSaveAndNext} className="btn btn-primary" style={{ background: '#06b6d4', border: 'none', fontSize: '13px', padding: '10px 24px' }}>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={handleSaveAndNext} className="btn btn-primary" style={{ fontSize: '14px', padding: '12px 28px' }}>
                 Save & Next ➔
               </button>
-              <button onClick={handleFinalSubmit} className="btn btn-danger" style={{ fontSize: '13px', padding: '10px 20px' }}>
+              <button onClick={handleFinalSubmit} className="btn btn-danger" style={{ fontSize: '14px', padding: '12px 24px' }}>
                 Submit Exam
               </button>
             </div>
@@ -391,54 +393,55 @@ export const TakeQuiz: React.FC = () => {
         </div>
 
         {/* Right Panel: Official 5-State Question Palette */}
-        <div style={{ width: '320px', background: '#0f172a', borderLeft: '1px solid rgba(255,255,255,0.1)', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ width: '340px', background: 'var(--color-surface)', borderLeft: '1px solid var(--color-border)', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '-4px 0 16px rgba(0,0,0,0.02)' }}>
           <div>
-            <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-text-dark)', marginBottom: '20px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Question Palette
             </h3>
 
             {/* Legend Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px', fontSize: '11px', color: '#94a3b8' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#10b981' }} /> Answered ({countAnswered})
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px', fontSize: '12px', color: 'var(--color-text-light)', fontWeight: 500 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: 'var(--color-success)' }} /> Answered ({countAnswered})
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#ef4444' }} /> Not Answered ({countNotAnswered})
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: 'var(--color-danger)' }} /> Not Answered ({countNotAnswered})
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#64748b' }} /> Not Visited ({countNotVisited})
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: 'var(--color-text-light)', opacity: 0.5 }} /> Not Visited ({countNotVisited})
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#a855f7' }} /> Marked ({countMarked})
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: 'var(--color-eye)' }} /> Marked ({countMarked})
               </div>
             </div>
 
             {/* Question Buttons Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
               {quiz.questions.map((q, idx) => {
                 const stat = qStatuses[q.id] || { state: 'NOT_VISITED' };
                 const isCurrent = idx === currentIndex;
 
-                let bg = '#64748b'; // default NOT_VISITED
-                if (stat.state === 'ANSWERED') bg = '#10b981';
-                else if (stat.state === 'NOT_ANSWERED') bg = '#ef4444';
-                else if (stat.state === 'MARKED_FOR_REVIEW') bg = '#a855f7';
-                else if (stat.state === 'ANSWERED_AND_MARKED') bg = '#8b5cf6';
+                let bg = 'var(--color-bg)'; // default NOT_VISITED
+                let textColor = 'var(--color-text-light)';
+                if (stat.state === 'ANSWERED') { bg = 'var(--color-success)'; textColor = 'var(--color-text-inverse)'; }
+                else if (stat.state === 'NOT_ANSWERED') { bg = 'var(--color-danger)'; textColor = 'var(--color-text-inverse)'; }
+                else if (stat.state === 'MARKED_FOR_REVIEW') { bg = 'var(--color-eye)'; textColor = 'var(--color-text-inverse)'; }
+                else if (stat.state === 'ANSWERED_AND_MARKED') { bg = 'var(--color-primary)'; textColor = 'var(--color-text-inverse)'; }
 
                 return (
                   <button
                     key={q.id}
                     onClick={() => handleNavigateQuestion(idx)}
                     style={{
-                      width: '42px',
-                      height: '42px',
-                      borderRadius: '8px',
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '10px',
                       background: bg,
-                      color: '#ffffff',
+                      color: textColor,
                       fontWeight: 800,
-                      fontSize: '13px',
-                      border: isCurrent ? '2px solid #ffffff' : 'none',
-                      boxShadow: isCurrent ? '0 0 10px rgba(255,255,255,0.5)' : 'none',
+                      fontSize: '14px',
+                      border: isCurrent ? '2px solid var(--color-text-dark)' : '1px solid var(--color-border)',
+                      boxShadow: isCurrent ? 'var(--shadow-md)' : 'none',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease'
                     }}
@@ -450,8 +453,8 @@ export const TakeQuiz: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
-            <button onClick={handleFinalSubmit} className="btn btn-danger" style={{ width: '100%', padding: '12px', fontWeight: 700, fontSize: '13px' }}>
+          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '20px' }}>
+            <button onClick={handleFinalSubmit} className="btn btn-danger" style={{ width: '100%', padding: '14px', fontWeight: 800, fontSize: '14px' }}>
               Finish & Submit Exam
             </button>
           </div>
@@ -460,60 +463,60 @@ export const TakeQuiz: React.FC = () => {
 
       {/* Physics Formula Drawer Overlay */}
       {showFormulaDrawer && (
-        <div style={{ position: 'fixed', top: 0, right: 0, width: '380px', height: '100vh', background: '#0f172a', borderLeft: '1px solid rgba(255,255,255,0.2)', padding: '24px', zIndex: 1000, overflowY: 'auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '16px', color: '#06b6d4' }}>📐 Class 10 Physics Formulas</h3>
-            <button onClick={() => setShowFormulaDrawer(false)} className="btn" style={{ padding: '4px 10px' }}>✕</button>
+        <div style={{ position: 'fixed', top: 0, right: 0, width: '400px', height: '100vh', background: 'var(--glass-bg)', borderLeft: '1px solid var(--color-border)', padding: '32px', zIndex: 1000, overflowY: 'auto', backdropFilter: 'blur(24px)', boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }} className="animate-fade-in">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '18px', color: 'var(--color-accent-dark)', fontWeight: 800 }}>📐 Class 10 Physics Formulas</h3>
+            <button onClick={() => setShowFormulaDrawer(false)} className="btn btn-outline" style={{ padding: '6px 12px' }}>✕</button>
           </div>
-          <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.6 }}>
-            <h4 style={{ color: '#f8fafc', marginTop: '12px' }}>⚡ Electricity</h4>
-            <p>• Ohm's Law: <code>V = I × R</code></p>
-            <p>• Resistance in Series: <code>R_s = R₁ + R₂ + R₃</code></p>
-            <p>• Resistance in Parallel: <code>1/R_p = 1/R₁ + 1/R₂</code></p>
-            <p>• Electric Power: <code>P = V × I = I²R = V²/R</code></p>
-            <p>• Joule's Heating: <code>H = I² × R × t</code></p>
+          <div style={{ fontSize: '14px', color: 'var(--color-text)', lineHeight: 1.8 }}>
+            <h4 style={{ color: 'var(--color-text-dark)', marginTop: '16px', fontWeight: 700 }}>⚡ Electricity</h4>
+            <p>• Ohm's Law: <code style={{background:'var(--color-surface)', padding:'2px 6px', borderRadius:'4px'}}>V = I × R</code></p>
+            <p>• Resistance in Series: <code style={{background:'var(--color-surface)', padding:'2px 6px', borderRadius:'4px'}}>R_s = R₁ + R₂ + R₃</code></p>
+            <p>• Resistance in Parallel: <code style={{background:'var(--color-surface)', padding:'2px 6px', borderRadius:'4px'}}>1/R_p = 1/R₁ + 1/R₂</code></p>
+            <p>• Electric Power: <code style={{background:'var(--color-surface)', padding:'2px 6px', borderRadius:'4px'}}>P = V × I = I²R = V²/R</code></p>
+            <p>• Joule's Heating: <code style={{background:'var(--color-surface)', padding:'2px 6px', borderRadius:'4px'}}>H = I² × R × t</code></p>
 
-            <h4 style={{ color: '#f8fafc', marginTop: '16px' }}>💡 Optics</h4>
-            <p>• Mirror Formula: <code>1/f = 1/v + 1/u</code></p>
-            <p>• Lens Formula: <code>1/f = 1/v - 1/u</code></p>
-            <p>• Power of Lens: <code>P = 1 / f (in meters)</code></p>
-            <p>• Refractive Index: <code>n = c / v</code></p>
+            <h4 style={{ color: 'var(--color-text-dark)', marginTop: '24px', fontWeight: 700 }}>💡 Optics</h4>
+            <p>• Mirror Formula: <code style={{background:'var(--color-surface)', padding:'2px 6px', borderRadius:'4px'}}>1/f = 1/v + 1/u</code></p>
+            <p>• Lens Formula: <code style={{background:'var(--color-surface)', padding:'2px 6px', borderRadius:'4px'}}>1/f = 1/v - 1/u</code></p>
+            <p>• Power of Lens: <code style={{background:'var(--color-surface)', padding:'2px 6px', borderRadius:'4px'}}>P = 1 / f (in m)</code></p>
+            <p>• Refractive Index: <code style={{background:'var(--color-surface)', padding:'2px 6px', borderRadius:'4px'}}>n = c / v</code></p>
           </div>
         </div>
       )}
 
       {/* Socratic AI Tutor Drawer Overlay */}
       {showAiDrawer && (
-        <div style={{ position: 'fixed', top: 0, right: 0, width: '420px', height: '100vh', background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(16px)', borderLeft: '1px solid #6366f1', padding: '24px', zIndex: 1000, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ position: 'fixed', top: 0, right: 0, width: '440px', height: '100vh', background: 'var(--glass-bg)', backdropFilter: 'blur(24px)', borderLeft: '2px solid var(--color-primary)', padding: '32px', zIndex: 1000, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '-10px 0 30px rgba(79, 70, 229, 0.15)' }} className="animate-fade-in">
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '20px' }}>🤖</span>
-                <h3 style={{ fontSize: '16px', color: '#a5b4fc', margin: 0 }}>Socratic AI Physics Tutor</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '24px' }}>🤖</span>
+                <h3 style={{ fontSize: '18px', color: 'var(--color-primary-dark)', margin: 0, fontWeight: 800 }}>Socratic AI Physics Tutor</h3>
               </div>
-              <button onClick={() => setShowAiDrawer(false)} className="btn" style={{ padding: '4px 10px' }}>✕</button>
+              <button onClick={() => setShowAiDrawer(false)} className="btn btn-outline" style={{ padding: '6px 12px' }}>✕</button>
             </div>
 
             {aiLoading ? (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: '#a5b4fc' }}>
+              <div className="loading" style={{ padding: '60px 0', textAlign: 'center', color: 'var(--color-primary-dark)' }}>
                 Consulting NCERT Physics Vector Knowledge Base...
               </div>
             ) : (
               <div>
-                <div style={{ background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '12px', padding: '16px', fontSize: '13.5px', color: '#f8fafc', lineHeight: 1.6, marginBottom: '20px' }}>
+                <div style={{ background: 'var(--color-primary-light)', border: '1px solid var(--color-primary)', borderRadius: '16px', padding: '20px', fontSize: '14.5px', color: 'var(--color-text-dark)', lineHeight: 1.6, marginBottom: '24px', boxShadow: 'var(--shadow-sm)' }}>
                   {aiHintText}
                 </div>
 
                 {aiSources.length > 0 && (
                   <div>
-                    <h4 style={{ fontSize: '12px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '8px' }}>
+                    <h4 style={{ fontSize: '12.5px', color: 'var(--color-text-light)', textTransform: 'uppercase', marginBottom: '12px', fontWeight: 800 }}>
                       📌 Grounded NCERT Textbook Sources
                     </h4>
                     {aiSources.map((src, i) => (
-                      <div key={i} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: '#cbd5e1', marginBottom: '8px', borderLeft: '3px solid #06b6d4' }}>
-                        <div style={{ fontWeight: 700, color: '#06b6d4' }}>{src.title}</div>
-                        <div style={{ fontStyle: 'italic', margin: '4px 0' }}>"{src.excerpt}"</div>
-                        {src.page && <div style={{ fontSize: '10px', color: '#64748b' }}>{src.page}</div>}
+                      <div key={i} style={{ background: 'var(--color-surface)', borderRadius: '12px', padding: '14px 16px', fontSize: '13px', color: 'var(--color-text)', marginBottom: '12px', borderLeft: '4px solid var(--color-accent)', boxShadow: 'var(--shadow-sm)' }}>
+                        <div style={{ fontWeight: 800, color: 'var(--color-accent-dark)' }}>{src.title}</div>
+                        <div style={{ fontStyle: 'italic', margin: '6px 0', lineHeight: 1.5 }}>"{src.excerpt}"</div>
+                        {src.page && <div style={{ fontSize: '11px', color: 'var(--color-text-light)', fontWeight: 600 }}>{src.page}</div>}
                       </div>
                     ))}
                   </div>

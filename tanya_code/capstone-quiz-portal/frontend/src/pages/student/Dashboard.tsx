@@ -1,13 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
-interface StatSummary {
-  totalAttempts: number;
-  averageAccuracy: number;
-  totalTimeSpent: number;
-  currentStreak: number;
+// ── Mastery color ramp helper ─────────────────
+function masteryColor(pct: number): string {
+  if (pct >= 80) return 'var(--mastery-100)';
+  if (pct >= 60) return 'var(--mastery-80)';
+  if (pct >= 40) return 'var(--mastery-60)';
+  if (pct >= 20) return 'var(--mastery-40)';
+  if (pct > 0)   return 'var(--mastery-20)';
+  return 'var(--mastery-0)';
+}
+
+function thetaLabel(theta: number): { tier: string; color: string } {
+  if (theta >= 1.5) return { tier: 'Expert',      color: 'var(--mastery-100)' };
+  if (theta >= 0.8) return { tier: 'Advanced',    color: 'var(--mastery-80)' };
+  if (theta >= 0.0) return { tier: 'Proficient',  color: 'var(--mastery-60)' };
+  if (theta >= -0.8)return { tier: 'Developing',  color: 'var(--mastery-40)' };
+  return              { tier: 'Beginning',  color: 'var(--mastery-20)' };
 }
 
 interface TopicInfo {
@@ -18,289 +29,271 @@ interface TopicInfo {
   attemptsCount: number;
 }
 
-interface ChartPoint {
-  quizTitle: string;
-  scorePercent: number;
-  date: string;
-}
-
-interface ActivityItem {
-  attemptId: string;
-  quizId: string;
-  quizTitle: string;
-  topicName: string;
-  score: number;
-  totalQuestions: number;
-  percentage: number;
-  timeSpent: number;
-  date: string;
+interface DashboardData {
+  summary: { totalAttempts: number; averageAccuracy: number; currentStreak: number; totalTimeSpent: number };
+  theta: number;
+  xp: number;
+  learnedTopics: string[];
+  lastQuizDelta: string | null;
+  strongTopics: TopicInfo[];
+  weakTopics: TopicInfo[];
+  improvingTopics: TopicInfo[];
+  recentActivity: any[];
 }
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [chapters, setChapters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [summary, setSummary] = useState<StatSummary | null>(null);
-  const [strongTopics, setStrongTopics] = useState<TopicInfo[]>([]);
-  const [weakTopics, setWeakTopics] = useState<TopicInfo[]>([]);
-  const [progressChart, setProgressChart] = useState<ChartPoint[]>([]);
-  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchAll = async () => {
       try {
-        const res = await client.get('/analytics/student');
-        setSummary(res.data.summary);
-        setStrongTopics(res.data.strongTopics);
-        setWeakTopics(res.data.weakTopics);
-        setProgressChart(res.data.progressChart);
-        setRecentActivity(res.data.recentActivity);
+        const [dashRes, chapRes] = await Promise.all([
+          client.get('/analytics/student'),
+          client.get('/chapters')
+        ]);
+        setData(dashRes.data);
+        setChapters(chapRes.data);
       } catch (err) {
         console.error(err);
-        setError('Failed to load dashboard metrics.');
+        setError('Failed to load dashboard.');
       } finally {
         setLoading(false);
       }
     };
-    fetchDashboardData();
+    fetchAll();
   }, []);
 
-  if (loading) {
-    return <div style={{ fontWeight: 600, padding: '40px', color: '#94a3b8' }}>Initializing Synapse Engine...</div>;
-  }
+  if (loading) return <div className="loading animate-fade-in">Loading your progress...</div>;
+  if (error || !data) return <div className="alert alert-danger" style={{ margin: '40px' }}>{error || 'Error'}</div>;
 
-  if (error) {
-    return <div className="alert alert-danger" style={{ margin: '40px' }}>{error}</div>;
-  }
+  const { tier, color: tierColor } = thetaLabel(data.theta);
+  const allTopics: any[] = [];
+  chapters.forEach(ch => ch.topics.forEach((t: any) => allTopics.push({ ...t, chapterName: ch.name })));
 
-  const userTheta = user?.theta ?? 0.8;
-  const userIq = user?.iqScore ?? 110;
+  // Build per-topic mastery map from analytics
+  const masteryMap: Record<string, number> = {};
+  [...data.strongTopics, ...data.weakTopics, ...data.improvingTopics].forEach(t => {
+    masteryMap[t.topicId] = t.averageScore;
+  });
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
   return (
-    <div style={{ padding: '32px' }}>
-      {/* Header Banner */}
+    <div className="animate-fade-in" style={{ padding: '32px 36px', maxWidth: '1100px' }}>
+
+      {/* ── Hero Banner ─────────────────────── */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(99, 102, 241, 0.15))',
-        border: '1px solid rgba(6, 182, 212, 0.3)',
-        borderRadius: '20px',
-        padding: '28px',
-        marginBottom: '32px',
-        backdropFilter: 'blur(12px)',
+        background: 'linear-gradient(135deg, var(--paper-2) 0%, #FFFFFF 100%)',
+        border: '1px solid var(--border)',
+        borderRadius: '18px',
+        padding: '28px 32px',
+        marginBottom: '28px',
         display: 'flex',
-        alignItems: 'center',
         justifyContent: 'space-between',
+        alignItems: 'flex-start',
         flexWrap: 'wrap',
         gap: '20px'
       }}>
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: '12px', background: 'rgba(6, 182, 212, 0.2)', color: '#06b6d4', fontSize: '11px', fontWeight: 800, marginBottom: '12px' }}>
-            ⚛️ CLASS 10 PHYSICS ADAPTIVE COMMAND CENTER
+          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+            Class 10 Physics · Adaptive Learning
           </div>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#f8fafc', margin: '0 0 6px 0' }}>
-            Welcome back, {user?.username}! 👋
+          <h1 className="display-heading" style={{ marginBottom: '6px' }}>
+            Welcome back, {user?.username}
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-            Personalized IRT Ability: <strong style={{ color: '#06b6d4' }}>θ = {userTheta.toFixed(2)}</strong> • BKT Growth Tracker Active
+          <p style={{ fontSize: '14px', color: 'var(--ink-muted)', fontWeight: 500 }}>
+            IRT Ability: <strong style={{ color: tierColor }}>{tier}</strong>
+            {' '}(θ = {data.theta >= 0 ? '+' : ''}{data.theta.toFixed(2)}) · {data.xp} XP
           </p>
+          {data.lastQuizDelta && (
+            <div style={{
+              marginTop: '12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'var(--success-bg)',
+              border: '1px solid rgba(5,150,105,0.2)',
+              borderRadius: '8px',
+              padding: '7px 14px',
+              fontSize: '13px',
+              fontWeight: 600,
+              color: '#047857'
+            }}>
+              <span>📈</span>
+              <span>Last session: {data.lastQuizDelta}</span>
+            </div>
+          )}
         </div>
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <Link to="/student/chapters" className="btn btn-primary" style={{ padding: '12px 24px', fontSize: '14px', background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', border: 'none' }}>
-            📝 Start JEE Mains Practice
+        <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+          <Link to="/student/chapters" className="btn btn-primary" style={{ padding: '10px 22px' }}>
+            📗 My Modules
           </Link>
-          <Link to="/student/ai-tutor" className="btn" style={{ padding: '12px 20px', fontSize: '14px', background: 'rgba(255, 255, 255, 0.08)', color: '#f8fafc', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
-            🤖 Socratic AI Tutor
+          <Link to="/student/skill-tree" className="btn btn-outline" style={{ padding: '10px 18px' }}>
+            🌿 Skill Tree
           </Link>
         </div>
       </div>
 
-      {/* KPI Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-        <div className="card" style={{ background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <div style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-            Latent Ability (IRT θ)
+      {/* ── Stats Row ────────────────────────── */}
+      <div className="stat-grid stagger-1">
+        {/* IRT Theta */}
+        <div className="card" style={{ borderTop: `3px solid ${tierColor}` }}>
+          <div className="stat-label">IRT Ability θ</div>
+          <div className="stat-value" style={{ color: tierColor, marginTop: '6px' }}>
+            {data.theta >= 0 ? '+' : ''}{data.theta.toFixed(2)}
           </div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#06b6d4' }}>
-            {userTheta > 0 ? `+${userTheta.toFixed(2)}` : userTheta.toFixed(2)}
+          <div style={{ fontSize: '12px', color: 'var(--ink-muted)', marginTop: '6px', fontWeight: 500 }}>
+            Tier: <strong style={{ color: tierColor }}>{tier}</strong>
           </div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-            Tier: {userTheta > 1.0 ? 'Advanced' : userTheta > 0.0 ? 'Proficient' : 'Developing'}
-          </div>
-        </div>
-
-        <div className="card" style={{ background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <div style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-            Average Accuracy
-          </div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#10b981' }}>
-            {summary?.averageAccuracy || 0}%
-          </div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-            Across {summary?.totalAttempts || 0} practice sessions
+          <div style={{ fontSize: '11px', color: 'var(--ink-muted)', marginTop: '4px', lineHeight: 1.4 }}>
+            Higher θ = questions calibrated to harder items
           </div>
         </div>
 
-        <div className="card" style={{ background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <div style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-            Active Practice Streak
+        {/* Average Accuracy */}
+        <div className="card" style={{ borderTop: '3px solid var(--mastery-80)' }}>
+          <div className="stat-label">Average Accuracy</div>
+          <div className="stat-value" style={{ color: masteryColor(data.summary.averageAccuracy), marginTop: '6px' }}>
+            {data.summary.averageAccuracy}%
           </div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#f59e0b' }}>
-            ⚡ {summary?.currentStreak || 1} Days
-          </div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-            Keep solving daily for bonus XP
+          <div style={{ fontSize: '12px', color: 'var(--ink-muted)', marginTop: '6px' }}>
+            Across {data.summary.totalAttempts} quiz attempts
           </div>
         </div>
 
-        <div className="card" style={{ background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <div style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-            Cognitive Aptitude Index
+        {/* Streak */}
+        <div className="card" style={{ borderTop: '3px solid var(--ch-electric)' }}>
+          <div className="stat-label">Practice Streak</div>
+          <div className="stat-value" style={{ color: 'var(--ch-electric)', marginTop: '6px' }}>
+            ⚡ {data.summary.currentStreak}d
           </div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#a855f7' }}>
-            {userIq.toFixed(0)} IQ
+          <div style={{ fontSize: '12px', color: 'var(--ink-muted)', marginTop: '6px' }}>
+            Keep going — streaks earn bonus XP
           </div>
-          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-            Baseline Step 1 Diagnostic
+        </div>
+
+        {/* Total time */}
+        <div className="card" style={{ borderTop: '3px solid var(--ink-muted)' }}>
+          <div className="stat-label">Total Study Time</div>
+          <div className="stat-value" style={{ marginTop: '6px' }}>
+            {formatTime(data.summary.totalTimeSpent)}
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--ink-muted)', marginTop: '6px' }}>
+            Consistency matters most
           </div>
         </div>
       </div>
 
-      {/* Class 10 Physics Chapters Progress Section */}
-      <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#f8fafc', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span>⚡</span> Class 10 Physics Syllabus Mastery
+      {/* ── Module Progress ───────────────────── */}
+      <h2 className="section-heading" style={{ marginBottom: '16px' }} id="modules">
+        Module Progress
       </h2>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-        {/* Chapter 1: Light */}
-        <div className="card" style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(6, 182, 212, 0.3)', backdropFilter: 'blur(12px)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '22px' }}>💡</span>
-            <span className="badge" style={{ background: 'rgba(6, 182, 212, 0.2)', color: '#06b6d4', border: '1px solid #06b6d4', fontSize: '10px' }}>OPTICS</span>
-          </div>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', marginBottom: '6px' }}>Light: Reflection & Refraction</h3>
-          <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Spherical Mirrors, Snell's Law, Lens Formula & Power.</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px' }}>
-            <span>BKT Mastery P(L)</span>
-            <span style={{ fontWeight: 700, color: '#10b981' }}>85%</span>
-          </div>
-          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden', marginBottom: '16px' }}>
-            <div style={{ width: '85%', height: '100%', background: 'linear-gradient(90deg, #06b6d4, #10b981)' }} />
-          </div>
-          <Link to="/student/chapters" className="btn btn-primary" style={{ width: '100%', fontSize: '12px', padding: '8px 0', textAlign: 'center' }}>
-            Practice Optics Quizzes
-          </Link>
-        </div>
-
-        {/* Chapter 2: Human Eye */}
-        <div className="card" style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(168, 85, 247, 0.3)', backdropFilter: 'blur(12px)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '22px' }}>👁️</span>
-            <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid #a855f7', fontSize: '10px' }}>VISION</span>
-          </div>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', marginBottom: '6px' }}>Human Eye & Colourful World</h3>
-          <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Defects of Vision, Prism Dispersion, Atmospheric Refraction.</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px' }}>
-            <span>BKT Mastery P(L)</span>
-            <span style={{ fontWeight: 700, color: '#f59e0b' }}>68%</span>
-          </div>
-          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden', marginBottom: '16px' }}>
-            <div style={{ width: '68%', height: '100%', background: 'linear-gradient(90deg, #a855f7, #f59e0b)' }} />
-          </div>
-          <Link to="/student/chapters" className="btn btn-primary" style={{ width: '100%', fontSize: '12px', padding: '8px 0', textAlign: 'center' }}>
-            Practice Vision Quizzes
-          </Link>
-        </div>
-
-        {/* Chapter 3: Electricity */}
-        <div className="card" style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(245, 158, 11, 0.3)', backdropFilter: 'blur(12px)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '22px' }}>⚡</span>
-            <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', border: '1px solid #f59e0b', fontSize: '10px' }}>CIRCUITS</span>
-          </div>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', marginBottom: '6px' }}>Electricity & Circuits</h3>
-          <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Ohm's Law, Series/Parallel Circuits, Joule Heating, Power.</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px' }}>
-            <span>BKT Mastery P(L)</span>
-            <span style={{ fontWeight: 700, color: '#10b981' }}>90%</span>
-          </div>
-          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden', marginBottom: '16px' }}>
-            <div style={{ width: '90%', height: '100%', background: 'linear-gradient(90deg, #f59e0b, #10b981)' }} />
-          </div>
-          <Link to="/student/chapters" className="btn btn-primary" style={{ width: '100%', fontSize: '12px', padding: '8px 0', textAlign: 'center' }}>
-            Practice Circuit Quizzes
-          </Link>
-        </div>
-
-        {/* Chapter 4: Magnetism */}
-        <div className="card" style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(239, 68, 68, 0.3)', backdropFilter: 'blur(12px)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '22px' }}>🧲</span>
-            <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5', border: '1px solid #ef4444', fontSize: '10px' }}>MAGNETISM</span>
-          </div>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', marginBottom: '6px' }}>Magnetic Effects of Current</h3>
-          <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Field Lines, Solenoids, Fleming's Left & Right Hand Rules.</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px' }}>
-            <span>BKT Mastery P(L)</span>
-            <span style={{ fontWeight: 700, color: '#06b6d4' }}>75%</span>
-          </div>
-          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden', marginBottom: '16px' }}>
-            <div style={{ width: '75%', height: '100%', background: 'linear-gradient(90deg, #ef4444, #06b6d4)' }} />
-          </div>
-          <Link to="/student/chapters" className="btn btn-primary" style={{ width: '100%', fontSize: '12px', padding: '8px 0', textAlign: 'center' }}>
-            Practice Magnetism Quizzes
-          </Link>
-        </div>
-      </div>
-
-      {/* Recent Practice History */}
-      <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#f8fafc', marginBottom: '16px' }}>
-        📜 Recent Practice Attempts
-      </h2>
-      
-      <div className="card" style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '0', overflow: 'hidden' }}>
-        {recentActivity.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
-            No practice attempts recorded yet. Click "Start JEE Mains Practice" above to begin!
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '32px' }}>
+        {allTopics.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', color: 'var(--ink-muted)', padding: '40px' }}>
+            No modules yet — ask your teacher to publish chapters.
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', color: '#f8fafc' }}>
-            <thead>
-              <tr style={{ background: 'rgba(255, 255, 255, 0.05)', textAlign: 'left', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                <th style={{ padding: '14px 20px' }}>Quiz Title</th>
-                <th style={{ padding: '14px 20px' }}>Score</th>
-                <th style={{ padding: '14px 20px' }}>Accuracy</th>
-                <th style={{ padding: '14px 20px' }}>Time Spent</th>
-                <th style={{ padding: '14px 20px' }}>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentActivity.map((act) => (
-                <tr key={act.attemptId} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                  <td style={{ padding: '14px 20px', fontWeight: 600 }}>{act.quizTitle}</td>
-                  <td style={{ padding: '14px 20px' }}>{act.score} / {act.totalQuestions}</td>
-                  <td style={{ padding: '14px 20px' }}>
-                    <span className="badge" style={{
-                      background: act.percentage >= 80 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                      color: act.percentage >= 80 ? '#10b981' : '#f59e0b',
-                      border: `1px solid ${act.percentage >= 80 ? '#10b981' : '#f59e0b'}`
+          allTopics.map((topic, i) => {
+            const mastery = masteryMap[topic.id] ?? 0;
+            const learned = data.learnedTopics.includes(topic.id);
+            const hasQuiz = topic.quizzes && topic.quizzes.length > 0;
+            const mColor = masteryColor(mastery);
+            return (
+              <div
+                key={topic.id}
+                className="module-card animate-fade-up"
+                style={{ animationDelay: `${i * 0.04}s`, cursor: 'pointer' }}
+                onClick={() => navigate(`/student/study/${topic.id}`)}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                      {topic.chapterName}
+                    </div>
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)', marginBottom: '8px' }}>
+                      {topic.name}
+                    </div>
+                    {/* Mastery bar */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div className="mastery-bar-track" style={{ flex: 1 }}>
+                        <div className="mastery-bar-fill" style={{ width: `${mastery}%`, background: mColor }} />
+                      </div>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: mColor, minWidth: '36px' }}>
+                        {mastery > 0 ? `${mastery}%` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end', flexShrink: 0 }}>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px',
+                      background: learned ? 'var(--success-bg)' : 'var(--paper-3)',
+                      color: learned ? '#047857' : 'var(--ink-muted)',
+                      border: `1px solid ${learned ? 'rgba(5,150,105,0.2)' : 'var(--border)'}`
                     }}>
-                      {act.percentage}%
+                      {learned ? '✓ Learned' : 'Learn first'}
                     </span>
-                  </td>
-                  <td style={{ padding: '14px 20px', color: '#94a3b8' }}>{formatTime(act.timeSpent)}</td>
-                  <td style={{ padding: '14px 20px', color: '#64748b' }}>{new Date(act.date).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px',
+                      background: hasQuiz ? 'var(--accent-light)' : 'var(--paper-3)',
+                      color: hasQuiz ? 'var(--accent-dark)' : 'var(--ink-muted)',
+                      border: `1px solid ${hasQuiz ? 'var(--accent-border)' : 'var(--border)'}`
+                    }}>
+                      {hasQuiz ? '📝 Quiz ready' : 'No quiz yet'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
+
+      {/* ── Recent Activity ───────────────────── */}
+      {data.recentActivity.length > 0 && (
+        <>
+          <h2 className="section-heading" style={{ marginBottom: '14px' }}>Recent Attempts</h2>
+          <div className="table-container" style={{ marginBottom: '24px' }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Quiz</th><th>Score</th><th>Accuracy</th><th>Time</th><th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentActivity.map((act: any) => (
+                  <tr 
+                    key={act.attemptId} 
+                    onClick={() => navigate(`/student/results/${act.attemptId}`)}
+                    style={{ cursor: 'pointer' }}
+                    className="clickable-row"
+                  >
+                    <td style={{ fontWeight: 600, color: 'var(--ink)' }}>{act.quizTitle}</td>
+                    <td><strong>{act.score}</strong> / {act.totalQuestions}</td>
+                    <td>
+                      <span style={{
+                        fontWeight: 700, fontSize: '12px',
+                        color: masteryColor(act.percentage)
+                      }}>{act.percentage}%</span>
+                    </td>
+                    <td style={{ color: 'var(--ink-muted)' }}>{Math.round((act.timeSpent || 0) / 60)}m</td>
+                    <td style={{ color: 'var(--ink-muted)' }}>{new Date(act.date).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 };

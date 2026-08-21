@@ -1,120 +1,136 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
 /* ============================================
-   SYNAPSE CLASS 10 PHYSICS — Global Design System
-   Dark Sci-Fi Glassmorphism Theme
+   SYNAPSE PHYSICS — Lab Notebook Design System
+   Restrained, purposeful, identity-first.
    ============================================ */
 :root {
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-sans:    'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono:    'DM Mono', 'Courier New', monospace;
 
-  /* Core Physics Dark Theme */
-  --color-bg:          #090d16;   /* Deep Space Navy */
-  --color-surface:     #0f172a;   /* Slate 900 */
-  --color-surface-2:   #1e293b;   /* Slate 800 */
+  /* ── Core Palette ─────────────────────────── */
+  --ink:          #1A1A1A;   /* near-black ink */
+  --ink-soft:     #3D3D3D;   /* secondary text */
+  --ink-muted:    #71717A;   /* tertiary / placeholders */
+  --paper:        #FAFAF8;   /* warm paper white */
+  --paper-2:      #F4F3EF;   /* slightly off-white for inner surfaces */
+  --paper-3:      #EEEDE8;   /* hover/active surface */
+  --border:       rgba(26,26,26,0.10);
+  --border-strong: rgba(26,26,26,0.18);
 
-  /* Synapse Brand */
-  --color-primary:      #6366f1;   /* Indigo */
-  --color-primary-dark: #4f46e5;
-  --color-primary-light: rgba(99, 102, 241, 0.15);
+  /* ── Mastery Color Ramp (single hue, purposeful) ── */
+  --mastery-0:   #D4D4D8;   /* grey   — not started */
+  --mastery-20:  #FCD34D;   /* yellow — beginning */
+  --mastery-40:  #F59E0B;   /* amber  — learning */
+  --mastery-60:  #34D399;   /* mint   — progressing */
+  --mastery-80:  #10B981;   /* emerald — proficient */
+  --mastery-100: #059669;   /* deep green — mastered */
 
-  --color-accent:       #06b6d4;   /* Electric Cyan */
-  --color-accent-dark:  #0891b2;
-  --color-accent-light: rgba(6, 182, 212, 0.15);
+  /* ── Brand Accent (ink-amber) ──────────────── */
+  --accent:       #C77B2A;
+  --accent-dark:  #9A5E1A;
+  --accent-light: rgba(199,123,42,0.10);
+  --accent-border: rgba(199,123,42,0.25);
 
-  --color-secondary:      #f59e0b;  /* Amber */
-  --color-secondary-dark: #d97706;
+  /* ── Chapter Physics Accents ───────────────── */
+  --ch-optics:   #2563EB;   /* electric blue  — Light */
+  --ch-eye:      #7C3AED;   /* violet         — Human Eye */
+  --ch-electric: #D97706;   /* amber          — Electricity */
+  --ch-magnet:   #DC2626;   /* crimson        — Magnetism */
 
-  --color-success:     #10b981;   /* Emerald */
-  --color-success-bg:  rgba(16, 185, 129, 0.15);
-  --color-success-text: #6ee7b7;
+  /* ── Semantic ──────────────────────────────── */
+  --success:     #059669;
+  --success-bg:  rgba(5,150,105,0.08);
+  --danger:      #DC2626;
+  --danger-bg:   rgba(220,38,38,0.08);
+  --warning:     #D97706;
+  --warning-bg:  rgba(217,119,6,0.08);
 
-  --color-danger:      #ef4444;   /* Red */
-  --color-danger-bg:   rgba(239, 68, 68, 0.15);
-  --color-danger-text: #fca5a5;
+  /* ── CSS Aliases (legacy compat) ───────────── */
+  --color-bg:           var(--paper);
+  --color-surface:      #FFFFFF;
+  --color-surface-2:    var(--paper-2);
+  --color-primary:      var(--accent);
+  --color-primary-dark: var(--accent-dark);
+  --color-primary-light: var(--accent-light);
+  --color-accent:       #2563EB;
+  --color-accent-dark:  #1D4ED8;
+  --color-accent-light: rgba(37,99,235,0.08);
+  --color-secondary:    var(--ch-electric);
+  --color-secondary-dark: #B45309;
+  --color-success:      var(--success);
+  --color-success-bg:   var(--success-bg);
+  --color-success-text: #047857;
+  --color-danger:       var(--danger);
+  --color-danger-bg:    var(--danger-bg);
+  --color-danger-text:  #B91C1C;
+  --color-eye:          var(--ch-eye);
+  --color-optics:       var(--ch-optics);
+  --color-electric:     var(--ch-electric);
+  --color-magnet:       var(--ch-magnet);
+  --color-text:         var(--ink-soft);
+  --color-text-light:   var(--ink-muted);
+  --color-text-dark:    var(--ink);
+  --color-text-inverse: #FFFFFF;
+  --color-border:       var(--border);
+  --color-border-dark:  var(--border-strong);
+  --glass-bg:           rgba(255,255,255,0.85);
+  --glass-border:       rgba(255,255,255,0.6);
 
-  /* Physics Chapter Accents */
-  --color-optics:    #06b6d4;     /* Cyan  — Light & Optics */
-  --color-eye:       #a855f7;     /* Purple — Human Eye */
-  --color-electric:  #f59e0b;     /* Amber  — Electricity */
-  --color-magnet:    #ef4444;     /* Red    — Magnetism */
+  /* ── Shadows ──────────────────────────────── */
+  --shadow-xs:  0 1px 2px rgba(26,26,26,0.05);
+  --shadow-sm:  0 1px 4px rgba(26,26,26,0.07);
+  --shadow-md:  0 4px 14px rgba(26,26,26,0.08);
+  --shadow-lg:  0 12px 32px rgba(26,26,26,0.10);
 
-  /* Text */
-  --color-text:       #cbd5e1;    /* Slate 300 */
-  --color-text-light: #94a3b8;    /* Slate 400 */
-  --color-text-dark:  #f8fafc;    /* Slate 50 */
-
-  /* Borders & Glass */
-  --color-border:      rgba(255, 255, 255, 0.08);
-  --color-border-dark: rgba(255, 255, 255, 0.15);
-  --glass-bg:          rgba(15, 23, 42, 0.7);
-  --glass-border:      rgba(255, 255, 255, 0.1);
-
-  /* Shadows */
-  --shadow-sm:      0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md:      0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-lg:      0 10px 32px rgba(0, 0, 0, 0.5);
-  --shadow-cyan:    0 0 20px rgba(6, 182, 212, 0.25);
-  --shadow-indigo:  0 0 20px rgba(99, 102, 241, 0.25);
-
-  /* Radii */
-  --radius-sm:  6px;
+  /* ── Radii ────────────────────────────────── */
+  --radius-sm:  5px;
   --radius-md:  10px;
   --radius-lg:  14px;
   --radius-xl:  20px;
   --radius-2xl: 28px;
 
-  /* Transition */
-  --transition-smooth: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* ── Transitions ──────────────────────────── */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-smooth: 0.22s var(--ease);
+  --transition-spring: 0.35s var(--spring);
 }
 
-/* ======================================
-   RESET & BASE
-   ====================================== */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
+/* ── Reset ──────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 body {
   font-family: var(--font-sans);
-  background-color: var(--color-bg);
-  color: var(--color-text);
+  background-color: var(--paper);
+  color: var(--ink-soft);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
 }
 
-/* Ambient Physics Background Glow */
+/* Subtle grid-paper background texture */
 body::before {
   content: '';
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background:
-    radial-gradient(ellipse at 15% 40%, rgba(6, 182, 212, 0.08), transparent 40%),
-    radial-gradient(ellipse at 85% 20%, rgba(99, 102, 241, 0.08), transparent 40%),
-    radial-gradient(ellipse at 50% 90%, rgba(168, 85, 247, 0.05), transparent 40%);
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(26,26,26,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26,26,26,0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
   pointer-events: none;
   z-index: 0;
 }
 
-/* ======================================
-   SCROLLBAR
-   ====================================== */
+/* ── Scrollbar ──────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: var(--color-surface); }
-::-webkit-scrollbar-thumb { background: var(--color-surface-2); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(26,26,26,0.12); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-/* ======================================
-   LAYOUT
-   ====================================== */
+/* ── Layout ─────────────────────────────────── */
 .app-container {
   display: flex;
   min-height: 100vh;
@@ -122,14 +138,12 @@ body::before {
   z-index: 1;
 }
 
-/* ======================================
-   SIDEBAR
-   ====================================== */
+/* ── Sidebar ─────────────────────────────────── */
 .sidebar {
-  width: 250px;
+  width: 252px;
   min-height: 100vh;
-  background: rgba(9, 13, 22, 0.95);
-  border-right: 1px solid var(--glass-border);
+  background: var(--paper-2);
+  border-right: 1px solid var(--border);
   padding: 20px 14px;
   display: flex;
   flex-direction: column;
@@ -137,8 +151,6 @@ body::before {
   top: 0;
   height: 100vh;
   overflow-y: auto;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   z-index: 100;
 }
 
@@ -148,29 +160,25 @@ body::before {
   gap: 10px;
   padding: 10px 14px;
   border-radius: var(--radius-md);
-  color: var(--color-text-light);
+  color: var(--ink-muted);
   font-size: 13.5px;
   font-weight: 600;
   text-decoration: none;
   transition: var(--transition-smooth);
   margin-bottom: 2px;
+  letter-spacing: -0.01em;
 }
-
 .nav-link:hover {
-  background: var(--color-accent-light);
-  color: var(--color-accent);
+  background: var(--paper-3);
+  color: var(--ink);
 }
-
 .nav-link.active {
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(99, 102, 241, 0.15));
-  color: var(--color-accent);
-  border: 1px solid rgba(6, 182, 212, 0.3);
-  box-shadow: var(--shadow-cyan);
+  background: var(--accent-light);
+  color: var(--accent-dark);
+  border: 1px solid var(--accent-border);
 }
 
-/* ======================================
-   MAIN CONTENT
-   ====================================== */
+/* ── Main Content ────────────────────────────── */
 .main-content {
   flex: 1;
   min-height: 100vh;
@@ -180,28 +188,69 @@ body::before {
   z-index: 1;
 }
 
-/* ======================================
-   CARDS
-   ====================================== */
+/* ── Cards ───────────────────────────────────── */
 .card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-xl);
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 24px;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   transition: var(--transition-smooth);
+  position: relative;
 }
-
-.card:hover {
-  border-color: rgba(6, 182, 212, 0.2);
+.card-hover:hover {
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.glass-panel {
+  background: rgba(255,255,255,0.80);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-lg);
 }
 
-/* ======================================
-   BUTTONS
-   ====================================== */
+/* ── Display Heading ─────────────────────────── */
+.display-heading {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.section-heading {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.header-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.header-subtitle {
+  font-size: 14px;
+  color: var(--ink-muted);
+  margin-top: 4px;
+}
+
+/* ── Mastery Bar ─────────────────────────────── */
+.mastery-bar-track {
+  width: 100%;
+  height: 7px;
+  background: var(--paper-3);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.mastery-bar-fill {
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.8s var(--ease);
+}
+
+/* ── Buttons ─────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -212,115 +261,95 @@ body::before {
   font-size: 13.5px;
   font-weight: 700;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-dark);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--color-text-dark);
+  border: 1px solid var(--border-strong);
+  background: #FFFFFF;
+  color: var(--ink);
   cursor: pointer;
   text-decoration: none;
   transition: var(--transition-smooth);
   outline: none;
   white-space: nowrap;
+  letter-spacing: -0.01em;
 }
-
 .btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--paper-2);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
-
-.btn:active {
-  transform: translateY(0);
-}
+.btn:active { transform: translateY(0); }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-  border: none;
-  color: #ffffff;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
 }
-
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--color-primary-dark), var(--color-accent-dark));
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
-  transform: translateY(-2px);
+  background: var(--ink-soft);
+  border-color: var(--ink-soft);
+  color: var(--paper);
 }
 
 .btn-accent {
-  background: linear-gradient(135deg, var(--color-accent), #3b82f6);
-  border: none;
-  color: #fff;
-  box-shadow: var(--shadow-cyan);
+  background: var(--accent-light);
+  border-color: var(--accent-border);
+  color: var(--accent-dark);
 }
+.btn-accent:hover {
+  background: rgba(199,123,42,0.16);
+  color: var(--accent-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--ink-soft);
+  box-shadow: none;
+}
+.btn-outline:hover { background: var(--paper-2); }
 
 .btn-danger {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  border: none;
-  color: #fff;
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
 }
-
-.btn-danger:hover {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-  transform: translateY(-1px);
-}
+.btn-danger:hover { background: #B91C1C; color: white; }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
   transform: none !important;
+  box-shadow: none !important;
 }
 
-/* ======================================
-   FORMS
-   ====================================== */
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
-}
-
+/* ── Forms ───────────────────────────────────── */
+.form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
 .form-label {
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 700;
-  color: var(--color-text-light);
+  color: var(--ink-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
 }
-
-.form-input,
-.form-select,
-.form-textarea {
+.form-input, .form-select, .form-textarea, .input-field {
   width: 100%;
-  padding: 10px 14px;
+  padding: 11px 14px;
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 500;
-  color: var(--color-text-dark);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
+  color: var(--ink);
+  background: #FFFFFF;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   transition: var(--transition-smooth);
   outline: none;
   -webkit-appearance: none;
 }
-
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
-  border-color: var(--color-accent);
-  background: rgba(6, 182, 212, 0.06);
-  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+.form-input:focus, .form-select:focus, .form-textarea:focus, .input-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
 }
 
-.form-select option {
-  background: var(--color-surface);
-  color: var(--color-text-dark);
-}
-
-/* ======================================
-   BADGES
-   ====================================== */
+/* ── Badges ──────────────────────────────────── */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -329,273 +358,237 @@ body::before {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.05em;
 }
+.badge-easy   { background: var(--success-bg); color: #047857; border: 1px solid rgba(5,150,105,0.2); }
+.badge-medium { background: var(--warning-bg); color: #B45309; border: 1px solid rgba(217,119,6,0.2); }
+.badge-hard   { background: var(--danger-bg);  color: #B91C1C; border: 1px solid rgba(220,38,38,0.2); }
 
-.badge-easy {
-  background: rgba(16, 185, 129, 0.2);
-  color: #6ee7b7;
-  border: 1px solid rgba(16, 185, 129, 0.4);
-}
+.badge-physics-optics  { background: rgba(37,99,235,0.08); color: #1D4ED8; border: 1px solid rgba(37,99,235,0.2); }
+.badge-physics-eye     { background: rgba(124,58,237,0.08); color: #6D28D9; border: 1px solid rgba(124,58,237,0.2); }
+.badge-physics-electric { background: var(--warning-bg); color: #B45309; border: 1px solid rgba(217,119,6,0.2); }
+.badge-physics-magnet  { background: var(--danger-bg);  color: #B91C1C; border: 1px solid rgba(220,38,38,0.2); }
 
-.badge-medium {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fcd34d;
-  border: 1px solid rgba(245, 158, 11, 0.4);
-}
-
-.badge-hard {
-  background: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-}
-
-/* ======================================
-   STAT GRID (TEACHER / STUDENT DASHBOARD)
-   ====================================== */
+/* ── Stat Grid ───────────────────────────────── */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
+  gap: 16px;
   margin-bottom: 28px;
 }
+.stat-value { font-size: 26px; font-weight: 800; color: var(--ink); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.stat-label { font-size: 11px; font-weight: 700; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
 
-.stat-card {
-  padding: 20px 22px;
+/* ── Module Card ─────────────────────────────── */
+.module-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  transition: var(--transition-smooth);
+  cursor: pointer;
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  gap: 14px;
+}
+.module-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
-.stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
+/* ── Tabs ────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--paper-2);
+  overflow-x: auto;
+}
+.tab-btn {
+  padding: 13px 22px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active {
+  color: var(--accent-dark);
+  border-bottom-color: var(--accent);
+  background: #FFFFFF;
+}
+
+/* ── Inline Chat ─────────────────────────────── */
+.chat-bubble-ai {
+  background: var(--paper-2);
+  border: 1px solid var(--border);
+  border-radius: 12px 12px 12px 2px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--ink);
+  max-width: 85%;
+  align-self: flex-start;
+}
+.chat-bubble-user {
+  background: var(--ink);
+  border-radius: 12px 12px 2px 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--paper);
+  max-width: 85%;
+  align-self: flex-end;
+}
+.citation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  background: var(--accent-light);
+  border: 1px solid var(--accent-border);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-dark);
+  margin-top: 6px;
+}
+
+/* ── Accordion ───────────────────────────────── */
+.accordion {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.accordion-header {
+  padding: 16px 20px;
+  background: var(--paper-2);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition-smooth);
+  user-select: none;
+}
+.accordion-header:hover { background: var(--paper-3); }
+.accordion-body {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  background: var(--paper);
+}
+
+/* ── Skill Tree Nodes ────────────────────────── */
+.skill-node {
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  flex-shrink: 0;
+  cursor: pointer;
+  transition: var(--transition-spring);
+  border: 2px solid transparent;
+  position: relative;
 }
+.skill-node:hover { transform: scale(1.1); }
+.skill-node.mastered { box-shadow: 0 0 16px rgba(5,150,105,0.4); }
+.skill-node.locked { opacity: 0.4; cursor: not-allowed; }
 
-.stat-value {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--color-text-dark);
-  line-height: 1.1;
-}
-
-.stat-label {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--color-text-light);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 3px;
-}
-
-/* ======================================
-   TABLES
-   ====================================== */
+/* ── Tables ──────────────────────────────────── */
 .table-container {
   width: 100%;
   overflow-x: auto;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--border);
+  background: #FFFFFF;
 }
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13.5px;
-  color: var(--color-text);
-}
-
-thead tr {
-  background: rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid var(--glass-border);
-}
-
-th {
-  padding: 12px 18px;
-  text-align: left;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--color-text-light);
-}
-
-td {
-  padding: 12px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  vertical-align: middle;
-}
-
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; color: var(--ink-soft); }
+thead tr { background: var(--paper-2); border-bottom: 1px solid var(--border); }
+th { padding: 13px 20px; text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); }
+td { padding: 14px 20px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--paper-2); }
 
-tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
+/* ── Alerts ──────────────────────────────────── */
+.alert { padding: 14px 18px; border-radius: var(--radius-md); font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.alert-danger  { background: var(--danger-bg);  color: #B91C1C; border: 1px solid rgba(220,38,38,0.2); }
+.alert-success { background: var(--success-bg); color: #047857; border: 1px solid rgba(5,150,105,0.2); }
 
-/* ======================================
-   PAGE HEADERS
-   ====================================== */
-.header-title {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--color-text-dark);
-  line-height: 1.2;
-}
+/* ── Login Card ──────────────────────────────── */
+.login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--paper); }
+.login-card { width: 100%; max-width: 440px; background: #FFFFFF; border: 1px solid var(--border); border-radius: var(--radius-2xl); padding: 44px; box-shadow: var(--shadow-lg); }
 
-.header-subtitle {
-  font-size: 14px;
-  color: var(--color-text-light);
-  margin-top: 4px;
-}
-
-/* ======================================
-   ALERTS
-   ====================================== */
-.alert {
-  padding: 14px 18px;
-  border-radius: var(--radius-md);
-  font-size: 13.5px;
-  font-weight: 600;
-}
-
-.alert-danger {
-  background: var(--color-danger-bg);
-  color: var(--color-danger-text);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.alert-success {
-  background: var(--color-success-bg);
-  color: var(--color-success-text);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-/* ======================================
-   LOGIN PAGE
-   ====================================== */
-.login-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: var(--color-bg);
-}
-
-.login-card {
-  width: 100%;
-  max-width: 440px;
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-2xl);
-  padding: 40px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
-}
-
-.login-brand {
-  text-align: center;
-  margin-bottom: 36px;
-}
-
-.login-brand h1 {
-  font-size: 28px;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-primary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.login-brand p {
-  font-size: 13px;
-  color: var(--color-text-light);
-  margin-top: 6px;
-}
-
-/* ======================================
-   LOADING SPINNER
-   ====================================== */
+/* ── Loading Spinner ─────────────────────────── */
 .loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 60px;
-  color: var(--color-accent);
-  font-size: 15px;
-  font-weight: 700;
-  gap: 12px;
+  padding: 80px;
+  color: var(--ink-muted);
+  font-size: 14px;
+  font-weight: 600;
+  gap: 14px;
 }
-
 .loading::before {
   content: '';
   width: 20px;
   height: 20px;
-  border: 3px solid rgba(6, 182, 212, 0.2);
-  border-top-color: var(--color-accent);
+  border: 2.5px solid var(--border-strong);
+  border-top-color: var(--accent);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Modal Overlay ───────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26,26,26,0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.modal-content {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 36px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--shadow-lg);
+  animation: fadeInUp 0.25s var(--ease);
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+/* ── Animations ──────────────────────────────── */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn  { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
 
-/* ======================================
-   PHYSICS CHAPTER BADGES
-   ====================================== */
-.badge-physics-optics   { background: rgba(6, 182, 212, 0.2); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.4); }
-.badge-physics-eye      { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.4); }
-.badge-physics-electric { background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.4); }
-.badge-physics-magnet   { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+.animate-fade-in  { animation: fadeIn 0.35s var(--ease) forwards; }
+.animate-fade-up  { animation: fadeInUp 0.4s var(--ease) forwards; }
+.stagger-1 { animation-delay: 0.08s; }
+.stagger-2 { animation-delay: 0.15s; }
+.stagger-3 { animation-delay: 0.22s; }
+.stagger-4 { animation-delay: 0.30s; }
 
-/* ======================================
-   ANIMATIONS
-   ====================================== */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+/* ── XP Bar ──────────────────────────────────── */
+.xp-bar-track { width: 100%; height: 4px; background: var(--paper-3); border-radius: 20px; overflow: hidden; }
+.xp-bar-fill  { height: 100%; background: var(--accent); border-radius: 20px; transition: width 0.9s var(--ease); }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.2); }
-  50%       { box-shadow: 0 0 30px rgba(6, 182, 212, 0.4); }
-}
-
-.animate-fade-in    { animation: fadeIn 0.4s ease forwards; }
-.animate-fade-up    { animation: fadeInUp 0.4s ease forwards; }
-.animate-pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
-
-/* ======================================
-   RESPONSIVE
-   ====================================== */
+/* ── Responsive ──────────────────────────────── */
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .main-content { width: 100% !important; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
 }
-
 @media (max-width: 480px) {
   .stat-grid { grid-template-columns: 1fr; }
-}
-
-/* ======================================
-   PRINT STYLES (PTM Report Card)
-   ====================================== */
-@media print {
-  body { background: white !important; color: #1e293b !important; }
-  .sidebar, .btn, nav { display: none !important; }
-  .card { border: 1px solid #e2e8f0 !important; background: white !important; box-shadow: none !important; }
-  .main-content { width: 100% !important; }
 }

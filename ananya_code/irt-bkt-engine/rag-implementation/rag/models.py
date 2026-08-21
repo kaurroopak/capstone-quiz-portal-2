@@ -47,6 +47,7 @@ class TutoringContext:
     theta: float
     retrieved_chunks: List[RetrievedChunk]
     turn_number: int = 1
+    prerequisite_gaps: List[str] = field(default_factory=list)
 
 @dataclass
 class TutoringResponse:
