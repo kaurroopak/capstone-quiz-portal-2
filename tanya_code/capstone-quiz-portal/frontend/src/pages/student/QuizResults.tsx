@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import client from '../../api/client';
-
 import ReactMarkdown from 'react-markdown';
 
 interface ResponseItem {
@@ -37,8 +36,20 @@ interface AttemptResult {
   };
 }
 
+interface AdaptiveUpdate {
+  thetaBefore: number;
+  thetaAfter: number;
+  thetaDelta: number;
+  masteryProbability: number;
+  prerequisiteGaps: string[];
+}
+
 export const QuizResults: React.FC = () => {
   const { attemptId } = useParams();
+  const location = useLocation();
+  // adaptiveUpdate is passed via navigation state from TakeQuiz after submit
+  const adaptiveUpdate: AdaptiveUpdate | null = (location.state as any)?.adaptiveUpdate || null;
+
   const [result, setResult] = useState<AttemptResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -88,6 +99,15 @@ export const QuizResults: React.FC = () => {
   };
 
   const totalAnswerChanges = result.responses.reduce((sum, r) => sum + r.answerChanges, 0);
+
+  // IRT Tier label helpers
+  const getThetaTier = (theta: number): { tier: string; color: string } => {
+    if (theta >= 1.5) return { tier: 'Expert', color: '#047857' };
+    if (theta >= 0.8) return { tier: 'Advanced', color: '#065f46' };
+    if (theta >= 0.0) return { tier: 'Proficient', color: '#1d4ed8' };
+    if (theta >= -0.8) return { tier: 'Developing', color: '#b45309' };
+    return { tier: 'Beginning', color: '#b91c1c' };
+  };
 
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
@@ -149,6 +169,62 @@ export const QuizResults: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* IRT Ability Update Banner — rendered when coming from quiz submit with theta data */}
+      {adaptiveUpdate && (
+        <div style={{
+          marginBottom: '28px',
+          borderRadius: '16px',
+          padding: '20px 28px',
+          background: adaptiveUpdate.thetaDelta >= 0
+            ? 'linear-gradient(135deg, rgba(5,150,105,0.08) 0%, rgba(16,185,129,0.04) 100%)'
+            : 'linear-gradient(135deg, rgba(220,38,38,0.07) 0%, rgba(252,165,165,0.03) 100%)',
+          border: `1px solid ${adaptiveUpdate.thetaDelta >= 0 ? 'rgba(5,150,105,0.25)' : 'rgba(220,38,38,0.2)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{ fontSize: '32px' }}>{adaptiveUpdate.thetaDelta >= 0 ? '📈' : '📉'}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-light)', marginBottom: '4px' }}>
+              IRT Ability Score Updated
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text-dark)' }}>
+                θ {adaptiveUpdate.thetaBefore >= 0 ? '+' : ''}{adaptiveUpdate.thetaBefore.toFixed(2)}
+              </span>
+              <span style={{ fontSize: '20px', color: 'var(--color-text-light)' }}>→</span>
+              <span style={{
+                fontSize: '22px', fontWeight: 800,
+                color: adaptiveUpdate.thetaDelta >= 0 ? '#047857' : '#b91c1c'
+              }}>
+                θ {adaptiveUpdate.thetaAfter >= 0 ? '+' : ''}{adaptiveUpdate.thetaAfter.toFixed(2)}
+                <span style={{ fontSize: '13px', fontWeight: 600, marginLeft: '8px' }}>
+                  ({adaptiveUpdate.thetaDelta >= 0 ? '+' : ''}{adaptiveUpdate.thetaDelta.toFixed(2)})
+                </span>
+              </span>
+              {(() => {
+                const { tier, color } = getThetaTier(adaptiveUpdate.thetaAfter);
+                return (
+                  <span style={{
+                    fontSize: '12px', fontWeight: 800, padding: '4px 14px', borderRadius: '20px',
+                    background: `${color}18`, color, border: `1px solid ${color}40`
+                  }}>
+                    {tier} Level
+                  </span>
+                );
+              })()}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-light)', textTransform: 'uppercase', marginBottom: '4px' }}>BKT Mastery</div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: adaptiveUpdate.masteryProbability >= 0.7 ? '#047857' : adaptiveUpdate.masteryProbability >= 0.5 ? '#b45309' : '#b91c1c' }}>
+              {Math.round(adaptiveUpdate.masteryProbability * 100)}%
+            </div>
+          </div>
+        </div>
+      )}
 
       {result.studentStanding && (
         <div className="card" style={{ padding: '24px', marginBottom: '32px', backgroundColor: 'var(--color-surface)', borderLeft: '6px solid var(--color-primary)' }}>
@@ -303,18 +379,37 @@ export const QuizResults: React.FC = () => {
               <div style={{ marginTop: '16px', background: 'var(--color-primary-light)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-primary)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '20px' }}>🤖</span>
                 <div style={{ width: '100%' }}>
-                  <h4 style={{ margin: '0 0 6px 0', fontSize: '13px', color: 'var(--color-primary-dark)', fontWeight: 800 }}>Personalized AI Evaluation</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                    <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--color-primary-dark)', fontWeight: 800 }}>Personalized AI Evaluation</h4>
+                    {adaptiveUpdate && (() => {
+                      const { tier, color } = getThetaTier(adaptiveUpdate.thetaAfter);
+                      return (
+                        <span style={{
+                          fontSize: '10px', fontWeight: 800, padding: '2px 10px', borderRadius: '20px',
+                          background: `${color}18`, color, border: `1px solid ${color}40`,
+                          letterSpacing: '0.04em'
+                        }}>
+                          {tier} Level Response
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <div style={{ margin: 0, fontSize: '14px', color: 'var(--color-text-dark)', lineHeight: 1.5, display: 'block' }}>
                     {evaluations ? (
                       evaluations[resp.question.id] ? (
                         <ReactMarkdown>{evaluations[resp.question.id]}</ReactMarkdown>
                       ) : (
-                        "No detailed evaluation available."
+                        'No detailed evaluation available.'
                       )
                     ) : (
-                      "Generating personalized evaluation..."
+                      <span style={{ fontStyle: 'italic', color: 'var(--color-text-light)' }}>Generating personalized evaluation...</span>
                     )}
                   </div>
+                  {evaluations && evaluations[resp.question.id] && !isCorrect && (
+                    <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '8px', background: 'rgba(79,70,229,0.05)', borderLeft: '3px solid var(--color-primary)', fontSize: '12px', color: 'var(--color-text-light)' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--color-primary-dark)' }}>📚 NCERT-Grounded:</span> This explanation is sourced from the NCERT Class 10 Physics textbook via the RAG vector knowledge base.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

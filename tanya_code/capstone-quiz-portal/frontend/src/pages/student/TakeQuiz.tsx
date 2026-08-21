@@ -245,8 +245,10 @@ export const TakeQuiz: React.FC = () => {
     });
 
     try {
-      await client.post(`/attempts/${attemptId}/submit`, { responses: answersPayload });
-      navigate(`/student/results/${attemptId}`);
+      const submitRes = await client.post(`/attempts/${attemptId}/submit`, { responses: answersPayload });
+      // Pass adaptiveUpdate (theta before/after) as navigation state so QuizResults can show the update banner
+      const adaptiveUpdate = submitRes.data.adaptiveUpdate || null;
+      navigate(`/student/results/${attemptId}`, { state: { adaptiveUpdate } });
     } catch (e) {
       console.error(e);
       alert('Error submitting quiz attempt. Redirecting...');
@@ -304,9 +306,21 @@ export const TakeQuiz: React.FC = () => {
               <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-accent-dark)' }}>
                 Question {currentIndex + 1} of {quiz.questions.length}
               </span>
-              <span className="badge" style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary-dark)', border: '1px solid var(--color-primary-light)', fontSize: '11px' }}>
-                Single Choice MCQ (Class 10 Physics)
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {/* IRT Adaptive Difficulty Badge */}
+                <span style={{
+                  fontSize: '11px', fontWeight: 700, padding: '4px 12px', borderRadius: '20px',
+                  background: currentQ.difficulty === 'HARD' ? 'rgba(220,38,38,0.08)' : currentQ.difficulty === 'EASY' ? 'rgba(5,150,105,0.08)' : 'rgba(245,158,11,0.08)',
+                  color: currentQ.difficulty === 'HARD' ? '#b91c1c' : currentQ.difficulty === 'EASY' ? '#047857' : '#b45309',
+                  border: `1px solid ${currentQ.difficulty === 'HARD' ? 'rgba(220,38,38,0.2)' : currentQ.difficulty === 'EASY' ? 'rgba(5,150,105,0.2)' : 'rgba(245,158,11,0.2)'}`,
+                  letterSpacing: '0.03em'
+                }}>
+                  IRT-Calibrated: {currentQ.difficulty}
+                </span>
+                <span className="badge" style={{ background: 'var(--color-primary-light)', color: 'var(--color-primary-dark)', border: '1px solid var(--color-primary-light)', fontSize: '11px' }}>
+                  Single Choice MCQ (Class 10 Physics)
+                </span>
+              </div>
             </div>
 
             {/* Question Text */}

@@ -13,38 +13,79 @@ def _build_prompt(context: TutoringContext) -> str:
         retrieved_text += f"\n--- [Source: {r_chunk.chunk.source}, Part {r_chunk.chunk.chunk_index+1}] ---\n"
         retrieved_text += f"{r_chunk.chunk.text}\n"
 
-    # Convert theta to descriptive ability level for the LLM prompt
-    if context.theta < -1.0:
-        ability = "low (struggling)"
-    elif context.theta > 1.0:
-        ability = "high (advanced)"
-    else:
-        ability = "average"
-        
     mastery_pct = round(context.mastery_probability * 100, 1)
+    prereqs = ', '.join(context.prerequisite_gaps) if context.prerequisite_gaps else 'None'
+    misconception = context.misconception_tag if context.misconception_tag else 'None'
 
-    return f"""You are an AI physics tutor for a Class 9 Science student (age 13-15).
-You must use the retrieved textbook context to help the student learn. 
+    # ── TIER 1: STRUGGLING (theta < -1.0) ────────────────────────────────────
+    if context.theta < -1.0:
+        return f"""You are a patient, encouraging physics tutor helping a STRUGGLING student (Class 10, age 14-15).
+This student finds physics very difficult and needs maximum support. Their current mastery is only {mastery_pct}%.
 
-CONTEXT:
-- Concept: {context.concept_name}
-- Student's ability level (theta): {context.theta:.2f} ({ability})
-- Student answered: {context.student_answer}
-- Correct answer: {context.correct_answer}
-- Misconception tag: {context.misconception_tag if context.misconception_tag else 'None'}
-- Prerequisite concepts they need to review: {', '.join(context.prerequisite_gaps) if context.prerequisite_gaps else 'None'}
+STUDENT CONTEXT:
+- Topic: {context.concept_name}
+- They answered: "{context.student_answer}"
+- Correct answer: "{context.correct_answer}"
+- Their misconception: {misconception}
+- Prerequisite gaps: {prereqs}
 
-RETRIEVED TEXTBOOK CONTEXT:
+RETRIEVED TEXTBOOK:
 {retrieved_text}
 
-INSTRUCTIONS:
-1. Briefly acknowledge their answer. (If they got it wrong, gently point out why using the misconception tag if present).
-2. CLEARLY EXPLAIN the relevant physics concept using ONLY the retrieved textbook context. Use simple, concrete analogies appropriate for a 14-year-old.
-3. If they have prerequisite concepts to review, explicitly advise them to review those specific topics first before mastering this concept.
-4. END WITH A GUIDING QUESTION to check their understanding. Do not give them the final answer directly, but give them enough information to figure it out.
-5. Keep your total response under {MAX_TUTOR_RESPONSE_WORDS} words.
-6. Format your response cleanly using short paragraphs or bullet points.
+YOUR JOB (follow each step exactly):
+1. ACKNOWLEDGE: Gently say it's okay to get it wrong — mistakes are how we learn. Tell them which answer was correct in one simple sentence.
+2. BASICS FIRST: Before explaining this topic, address their prerequisite gaps ({prereqs}) — tell them they MUST review those first as they are the building blocks.
+3. SIMPLE EXPLANATION: Explain {context.concept_name} in the SIMPLEST possible terms. Use a very relatable real-life analogy from everyday Indian life (cricket, cooking, traffic, etc.). Avoid all jargon.
+4. STEP BY STEP: Break down exactly WHY "{context.correct_answer}" is right, one small logical step at a time. Number each step.
+5. EASY GUIDING QUESTION: End with a very simple yes/no or fill-in-the-blank question to check their understanding. Make it easy enough to rebuild their confidence.
+Keep your response under {MAX_TUTOR_RESPONSE_WORDS} words. Be warm, simple, and encouraging — never condescending.
 """
+
+    # ── TIER 2: DEVELOPING (theta -1.0 to 1.0) ───────────────────────────────
+    elif context.theta <= 1.0:
+        return f"""You are a supportive physics tutor helping a DEVELOPING student (Class 10, age 14-15).
+This student has a basic foundation but needs help connecting concepts. Their mastery is {mastery_pct}%.
+
+STUDENT CONTEXT:
+- Topic: {context.concept_name}
+- They answered: "{context.student_answer}"
+- Correct answer: "{context.correct_answer}"
+- Their misconception: {misconception}
+- Prerequisite gaps: {prereqs}
+
+RETRIEVED TEXTBOOK:
+{retrieved_text}
+
+YOUR JOB (follow each step exactly):
+1. ACKNOWLEDGE: Briefly confirm if they were right or wrong. If wrong, point out the specific misconception ({misconception}) that led them astray.
+2. CONCEPT EXPLANATION: Explain {context.concept_name} using the textbook content. Use one analogy to make it concrete. Connect it to what they already know from the prerequisite gaps ({prereqs}).
+3. WHY THEY WERE WRONG: Specifically explain why "{context.student_answer}" is incorrect and why "{context.correct_answer}" is right. Address the misconception directly.
+4. GUIDING QUESTION: End with a medium-difficulty application question that requires them to apply the concept to a slightly new scenario — not just recall a fact.
+Keep your response under {MAX_TUTOR_RESPONSE_WORDS} words. Be clear, direct, and specific.
+"""
+
+    # ── TIER 3: ADVANCED (theta > 1.0) ───────────────────────────────────────
+    else:
+        return f"""You are a physics tutor engaging with an ADVANCED student (Class 10, age 14-15).
+This student has strong fundamentals and is ready for deeper intellectual challenge. Their mastery is {mastery_pct}%.
+
+STUDENT CONTEXT:
+- Topic: {context.concept_name}
+- They answered: "{context.student_answer}"
+- Correct answer: "{context.correct_answer}"
+- Their misconception: {misconception}
+
+RETRIEVED TEXTBOOK:
+{retrieved_text}
+
+YOUR JOB (follow each step exactly):
+1. ACKNOWLEDGE: Briefly confirm their answer. If correct, validate it with a single sentence. If wrong, note the subtle conceptual slip without dwelling on basics.
+2. DEEP DIVE: Go BEYOND the textbook. Explain the deeper physics principle behind {context.concept_name} — the "why behind the why." Discuss edge cases, exceptions, or how this concept connects to a related advanced concept (e.g., real-world physics, engineering applications, or a related NCERT chapter).
+3. MATHEMATICAL INTUITION: Where appropriate, reference the formula or equation and explain intuitively what each variable represents and how changing them affects the outcome.
+4. CHALLENGING GUIDING QUESTION: End with a genuinely challenging, multi-step problem or thought experiment that pushes them beyond textbook recall and requires synthesis of multiple concepts. This should be hard enough to make them think for several minutes.
+Keep your response under {MAX_TUTOR_RESPONSE_WORDS} words. Treat this student as an intellectual equal — be rigorous, precise, and challenging.
+"""
+
 
 def generate_tutoring_response(context: TutoringContext) -> TutoringResponse:
     """Generate a tutoring response using the Gemini API."""

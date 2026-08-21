@@ -217,7 +217,7 @@ export const startQuizAttempt = async (req: AuthRequest, res: Response) => {
     if (existingAttempt) {
       // Fetch progress from Redis to restore state
       const cachedProgress = await getQuizProgress(existingAttempt.id);
-      
+
       // Security strip correct answers from questions
       existingAttempt.quiz.questions = existingAttempt.quiz.questions.map((q) => {
         const { correctAnswer, ...rest } = q;
@@ -321,7 +321,8 @@ export const submitQuiz = async (req: AuthRequest, res: Response) => {
 
     return res.json({
       message: 'Quiz submitted successfully',
-      attempt: completedAttempt
+      attempt: completedAttempt,
+      adaptiveUpdate: (completedAttempt as any).adaptiveUpdate || null
     });
   } catch (error: any) {
     console.error('Submit quiz error:', error);

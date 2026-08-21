@@ -98,30 +98,57 @@ export const submitQuizAttempt = async (attemptId: string, clientAnswers?: any):
   });
 
   // 6. Evaluate IRT Theta and BKT Mastery for Student
+  // Capture theta BEFORE evaluation so we can show the delta to the student
+  let thetaBefore = 0.0;
+  let thetaAfter = 0.0;
+  let masteryProbability = 0.5;
+  let prerequisiteGaps: string[] = [];
+
   try {
+    const userBefore = await prisma.user.findUnique({ where: { id: attempt.userId }, select: { theta: true } });
+    thetaBefore = userBefore?.theta ?? 0.0;
+
     const topicId = attempt.quiz.topicId;
-    for (const question of questions) {
+    const allAnswers = questions.map((question) => {
       const answerData = mergedAnswers[question.id] || {};
       const selectedAnswer = answerData.selectedAnswer || null;
       const isCorrect = selectedAnswer === question.correctAnswer;
-      const timeSpent = typeof answerData.timeSpent === 'number' ? answerData.timeSpent : 0;
-      const answerChanges = typeof answerData.answerChanges === 'number' ? answerData.answerChanges : 0;
+      const timeSpentQ = typeof answerData.timeSpent === 'number' ? answerData.timeSpent : 0;
+      const answerChangesQ = typeof answerData.answerChanges === 'number' ? answerData.answerChanges : 0;
+      return { questionId: question.id, topicId, isCorrect, timeSpent: timeSpentQ, answerChanges: answerChangesQ };
+    });
 
-      await AdaptiveService.evaluateAttempt({
-        userId: attempt.userId,
-        questionId: question.id,
-        topicId: topicId,
-        isCorrect: isCorrect,
-        timeSpent: timeSpent,
-        answerChanges: answerChanges
-      });
-    }
+    // Use batch evaluate for a single, coherent theta update
+    const evalResult = await AdaptiveService.evaluateQuiz({
+      userId: attempt.userId,
+      answers: allAnswers
+    });
+
+    thetaAfter = evalResult.newTheta;
+    masteryProbability = evalResult.masteryProbability;
+    prerequisiteGaps = evalResult.prerequisiteGaps;
+
+    // Persist updated theta to user record
+    await prisma.user.update({
+      where: { id: attempt.userId },
+      data: { theta: thetaAfter }
+    });
   } catch (err) {
     console.warn('Adaptive evaluation failed silently:', err);
+    thetaAfter = thetaBefore;
   }
 
   // 7. Clean up Redis cache
   await deleteQuizProgress(attemptId);
 
-  return updatedAttempt;
+  return {
+    ...updatedAttempt,
+    adaptiveUpdate: {
+      thetaBefore: parseFloat(thetaBefore.toFixed(3)),
+      thetaAfter: parseFloat(thetaAfter.toFixed(3)),
+      thetaDelta: parseFloat((thetaAfter - thetaBefore).toFixed(3)),
+      masteryProbability: parseFloat(masteryProbability.toFixed(3)),
+      prerequisiteGaps
+    }
+  };
 };
