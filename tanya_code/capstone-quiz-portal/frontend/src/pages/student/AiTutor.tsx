@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import client from '../../api/client';
+import ReactMarkdown from 'react-markdown';
+
+const getThetaTier = (theta: number): { tier: string; color: string } => {
+  if (theta >= 1.5) return { tier: 'Expert', color: '#047857' };
+  if (theta >= 0.8) return { tier: 'Advanced', color: '#065f46' };
+  if (theta >= 0.0) return { tier: 'Proficient', color: '#1d4ed8' };
+  if (theta >= -0.8) return { tier: 'Developing', color: '#b45309' };
+  return { tier: 'Beginning', color: '#b91c1c' };
+};
 
 interface ChatMessage {
   id: string;
@@ -15,6 +24,7 @@ export const AiTutor: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [studentProfile, setStudentProfile] = useState<{ theta: number; averageAccuracy: number } | null>(null);
   
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -28,6 +38,10 @@ export const AiTutor: React.FC = () => {
 
   useEffect(() => {
     fetchHistoryAndCheckInitial();
+    // Fetch student adaptive profile for the header banner
+    client.get('/analytics/student')
+      .then(res => setStudentProfile({ theta: res.data.theta ?? 0, averageAccuracy: res.data.summary?.averageAccuracy ?? 0 }))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -106,6 +120,42 @@ export const AiTutor: React.FC = () => {
         <p className="header-subtitle" style={{ margin: 0, fontSize: '13px' }}>
           Type a question below. Explanations adapt to your active cognitive profile.
         </p>
+        {/* Adaptive Profile Banner */}
+        {studentProfile && (() => {
+          const { tier, color } = getThetaTier(studentProfile.theta);
+          return (
+            <div style={{
+              marginTop: '12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '14px',
+              background: 'linear-gradient(90deg, rgba(79,70,229,0.06) 0%, rgba(139,92,246,0.04) 100%)',
+              border: '1px solid rgba(79,70,229,0.15)',
+              borderRadius: '10px',
+              padding: '8px 16px',
+              fontSize: '12px',
+              flexWrap: 'wrap'
+            }}>
+              <span style={{ fontWeight: 700, color: 'var(--color-text-light)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '10px' }}>Adaptive Profile</span>
+              <span style={{ fontWeight: 800, color: 'var(--color-text-dark)' }}>
+                θ = {studentProfile.theta >= 0 ? '+' : ''}{studentProfile.theta.toFixed(2)}
+              </span>
+              <span style={{
+                fontWeight: 700, padding: '2px 10px', borderRadius: '20px',
+                background: `${color}18`, color, border: `1px solid ${color}30`,
+                fontSize: '11px'
+              }}>
+                {tier}
+              </span>
+              <span style={{ color: 'var(--color-text-light)', fontSize: '11px', fontWeight: 600 }}>
+                Avg Accuracy: {studentProfile.averageAccuracy}%
+              </span>
+              <span style={{ color: 'var(--color-primary)', fontSize: '11px', fontWeight: 700 }}>
+                ✓ RAG-Grounded · NCERT Aligned
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Suggestion Chips Row */}
@@ -194,10 +244,9 @@ export const AiTutor: React.FC = () => {
                     color: 'var(--color-text-dark)',
                     fontWeight: 500,
                     fontSize: '14px',
-                    whiteSpace: 'pre-line',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
                   }}>
-                    {msg.message}
+                    {isAi ? <ReactMarkdown>{msg.message}</ReactMarkdown> : msg.message}
                   </div>
                   
                   {/* Utility Sub-bar */}

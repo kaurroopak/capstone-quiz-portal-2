@@ -83,10 +83,18 @@ export class AdaptiveService {
       const user = await prisma.user.findUnique({ where: { id: payload.userId } });
       const currentTheta = user?.theta ?? 0.0;
 
-      const response = await axios.post(`${PYTHON_FASTAPI_URL}/api/v1/adaptive/evaluate-quiz`, {
+      const snakeCaseAnswers = payload.answers.map(ans => ({
+        question_id: ans.questionId,
+        topic_id: ans.topicId,
+        is_correct: ans.isCorrect,
+        time_spent: ans.timeSpent,
+        answer_changes: ans.answerChanges
+      }));
+
+      const response = await axios.post(`${PYTHON_FASTAPI_URL}/api/v1/adaptive/evaluate`, {
         user_id: payload.userId,
         current_theta: currentTheta,
-        answers: payload.answers
+        answers: snakeCaseAnswers
       }, { timeout: 120000 });
 
       const newTheta = response.data.new_theta ?? currentTheta;
